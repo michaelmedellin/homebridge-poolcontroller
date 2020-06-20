@@ -2,20 +2,12 @@ var Accessory, Service, Characteristic, UUIDGen, Homebridge;
 var io = require('socket.io-client');
 var ssdp = require('node-ssdp').Client
 var socket;
-var debug = false;
+var debug = true;
 var circuitAccessory = require('./circuitAccessory.js');
 var lightAccessory = require('./lightAccessory.js');
-var heaterAccessory = require('./heaterAccessory.js');
-
-function targetHeatingCoolingStateForHeatModeAndCircuitState(heatMode, circuitState) {
-    if (heatMode && circuitState) {
-        return Characteristic.TargetHeatingCoolingState.HEAT;
-    } else if (!heatMode && circuitState) {
-        return Characteristic.TargetHeatingCoolingState.AUTO;
-    }
-
-    return Characteristic.TargetHeatingCoolingState.OFF;
-};
+// var heaterAccessory = require('./heaterAccessory.js');
+var bodyAccessory = require('./bodyAccessory.js');
+var utils = require('./utils.js')
 
 module.exports = function (homebridge) {
     //check homebridge version
@@ -25,7 +17,7 @@ module.exports = function (homebridge) {
     Characteristic = homebridge.hap.Characteristic;
     UUIDGen = homebridge.hap.uuid;
     Homebridge = homebridge;
-
+    
     homebridge.registerPlatform("homebridge-PoolControllerPlatform", "PoolControllerPlatform", PoolControllerPlatform, true);
 };
 
@@ -35,6 +27,7 @@ function PoolControllerPlatform(log, config, api) {
     self.log = log;
     self.config = config;
     self.accessories = {};
+    self.skipAllUnInit = true;
 
     //check config here.
     //check pool controller version
@@ -43,7 +36,6 @@ function PoolControllerPlatform(log, config, api) {
         self.api = api;
         self.api.on('didFinishLaunching', self.SSDPDiscovery.bind(this));
     }
-
 }
 
 PoolControllerPlatform.prototype.SSDPDiscovery = function () {
@@ -74,7 +66,7 @@ PoolControllerPlatform.prototype.SSDPDiscovery = function () {
         }, 5000)
 
     } else {
-      self.validateVersion(self.config.ip_address + "/device");
+      self.validateVersion(self.config.ip_address);
     }
 }
 
@@ -84,7 +76,7 @@ PoolControllerPlatform.prototype.validateVersion = function (URL) {
         , valid = false
         , validMajor = 4
         , validMinor = 1
-    request(URL, function (error, response, body) {
+    request(URL + "/device", function (error, response, body) {
         if (error)
             self.log('Error retrieving configuration from poolController.', error)
         else {
@@ -94,8 +86,32 @@ PoolControllerPlatform.prototype.validateVersion = function (URL) {
                 valid = true
             else if (major === validMajor && minor >= validMinor)
                 valid = true
-            if (valid)
-                self.socketInit()
+            if (valid) {
+                self.log("Version checked OK, getting config data");
+                request(URL + "/state/all", function (error, response, body) {
+                    if (error)
+                        self.log('Error retrieving initial state from poolController.', error)
+                    else {
+                        data = JSON.parse(body)
+                    }
+                    socket = io.connect(self.config.ip_address, {
+                        secure: self.config.secure,
+                        reconnect: true,
+                        rejectUnauthorized: false
+                    });
+                    socket.on('connection', function () {
+                        self.log('homebridge-poolcontroller connected to the server')
+                    })
+                    socket.on('connect_error', function () {
+                        self.log('ERROR: homebridge-poolcontroller can NOT find the pool controller')
+                    })
+                    socket.on('error', function (data) {
+                        console.log('Socket error:', data)
+                    });
+                                
+                    self.InitialData(data);
+                })
+        }
             else {
                 self.log.error('Version of poolController %s.%s does not meet the minimum for this Homebridge plugin %s.%s', major, minor, validMajor, validMinor)
                 process.exit()
@@ -106,139 +122,104 @@ PoolControllerPlatform.prototype.validateVersion = function (URL) {
 
 }
 
-
-PoolControllerPlatform.prototype.socketInit = function () {
-    var self = this;
-    socket = io.connect(self.config.ip_address, {
-        secure: self.config.secure,
-        reconnect: true,
-        rejectUnauthorized: false
-    });
-
-
-    socket.on('connection', function () {
-        self.log('homebridge-poolcontroller connected to the server')
-    })
-    socket.on('connect_error', function () {
-        self.log('ERROR: homebridge-poolcontroller can NOT find the pool controller')
-    })
-    // will eventually change to 'all' instead of 'one'
-    socket.once('all', function (data) {
-        self.InitialData(data);
-    });
-    socket.on('error', function (data) {
-        console.log('Socket error:', data)
-    });
-
-
-};
-
 PoolControllerPlatform.prototype.InitialData = function (data) {
+    this.log("Got config packet")
+//    if (debug) this.log("InitialData:", data);
+    var circuitData = data.circuits.concat(data.features)
+    var addCircuit = true
+    var bodyData = data.temps.bodies
+    var tempData = data.temps
 
-    socket.off("one");
-    if (debug) this.log("InitialData:", data);
-    var circuitData = data.circuit;
-
+//    this.log("Count of circuits", circuitData)
     for (var i in circuitData) {
-        if (circuitData[i].name !== "NOT USED") {
+        addCircuit=true
 
-            var circuitNumber = circuitData[i].number;
-            var circuitFunction = circuitData[i].circuitFunction.toLowerCase();
-            var circuitName = circuitData[i].friendlyName;
+        if (circuitData[i].name == "NOT USED" || circuitData[i].type.name.toLowerCase() == "spa" || circuitData[i].type.name.toLowerCase() == "pool") {
+            addCircuit = false
+        }
 
-            var circuitState = circuitData[i].status;
+        if (this.skipAllUnInit && circuitData[i].name.substr(0,3)=="AUX") {
+            addCircuit = false
+        }
 
-            var id = "poolController." + circuitData[i].numberStr + "." + circuitName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+        if (this.skipAllUnInit && circuitData[i].name.substr(0,7).toLowerCase()=="feature") {
+            addCircuit = false
+        }
+
+        if (addCircuit) {
+
+            var circuitNumber = circuitData[i].id;
+            var circuitFunction = circuitData[i].type.name.toLowerCase();
+            var circuitName = circuitData[i].name;
+            var circuitState = circuitData[i].isOn;
+            var id = "poolController." + circuitNumber + "." + circuitName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+
             var uuid = UUIDGen.generate(id);
-            if (debug) console.log('in InitialData circuitFunction: %s, circuitNumber: %s, id: %s, uuid: %s', circuitFunction, circuitNumber, id, uuid)
+            if (debug) this.log('in InitialData circuitFunction: %s, circuitNumber: %s, id: %s, uuid: %s', circuitFunction, circuitNumber, id, uuid)
             var cachedAccessory = this.accessories[uuid];
 
             // type === light
             if (['intellibrite', 'light', 'sam light', 'sal light', 'color wheel'].indexOf(circuitFunction) >= 0) {
                 if (cachedAccessory === undefined) {
-                    this.addLightAccessory(this.log, id, circuitName, circuitNumber, circuitState, socket);
+                    this.addLightAccessory(this.log, id, circuitName, circuitNumber, circuitState, socket, this);
                 } else {
-                    this.accessories[uuid] = new lightAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, socket);
+                    this.accessories[uuid] = new lightAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, socket, this);
                 }
             } else {
                 if (cachedAccessory === undefined) {
-                    this.addCircuitAccessory(this.log, id, circuitName, circuitNumber, circuitState, socket);
+                    this.addCircuitAccessory(this.log, id, circuitName, circuitNumber, circuitState, socket, this);
                 } else {
-
-                    // deal with heaters below
-                    if (!cachedAccessory.displayName.includes("Heater")) {
-                        this.accessories[uuid] = new circuitAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, socket);
-                    }
-                    else {
-                        console.log('Skipping cached accessory because it is a heater. %s', cachedAccessory.displayName)
+                    this.accessories[uuid] = new circuitAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, socket, this);
                     }
                 }
-            }
-
-
-            // Used for when blacklisting is added to get circuit identifier.
-            this.log("Found circuit %s (function: %s) with identifier: %s", circuitName, circuitFunction, id);
-            // Add heater accessory
-            if (circuitFunction === "pool" || circuitFunction === "spa") {
-                id += ".heater";
-                circuitName += " Heater"
-
-                uuid = UUIDGen.generate(id);
-                cachedAccessory = this.accessories[uuid];
-
-
-                var temperature = data.temperature;
-                var heaterActive = temperature.heaterActive;
-                var targetHeatingCoolingState = targetHeatingCoolingStateForHeatModeAndCircuitState(heatMode, circuitState);
-                var heatMode = temperature[circuitFunction + "HeatMode"] == 1 ? 1 : 0; // Don't allow solar for now. Not sure how interface with that.
-                var currentTemperature = temperature[circuitFunction + "Temp"];
-                var targetTemperature = temperature[circuitFunction + "SetPoint"];
-
-                if (cachedAccessory === undefined) {
-                    this.addHeaterAccessory(this.log, id, circuitName, circuitFunction, circuitNumber, circuitState, heatMode, targetHeatingCoolingState, currentTemperature, targetTemperature, socket);
-                } else {
-                    this.accessories[uuid] = new heaterAccessory(this.log, cachedAccessory, circuitFunction, circuitNumber, circuitState, heatMode, targetHeatingCoolingState, currentTemperature, targetTemperature, Homebridge, socket); //change heatmode to heater active later
-                }
-
-            }
+            }        
         }
-    }
+
+        for (var i in bodyData) {
+
+            var bodyNumber = bodyData[i].circuit
+            var bodyName = bodyData[i].name
+            var id = "poolController." + bodyNumber + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+            var uuid = UUIDGen.generate(id);
+            var cachedAccessory = this.accessories[uuid];
+
+            if (cachedAccessory === undefined) {
+                if (debug) this.log('Adding new body: %s', bodyName)
+
+                this.addBodyAccessory(this.log, id, bodyName, bodyData[i], socket, this );
+            } else {
+                if (debug) this.log('Adding cached body: %s', bodyName)
+
+                this.accessories[uuid] = new bodyAccessory(this.log, cachedAccessory, bodyData[i], Homebridge, socket, this)
+            }
+
+        }
+
+        var id = "poolController.0.Controller"; 
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
+/*        
+        if (cachedAccessory === undefined) 
+            this.addControllerAccessory(this.log, id, tempData , data.freeze, data.mode, data.pumps, socket, this );
+        else {
+            if (debug) this.log('Adding cached body: %s', bodyName)
+            this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, tempData , Homebridge, socket, this)
+        }
+*/
 
     socket.on('circuit', this.socketCircuitUpdated.bind(this));
-    socket.on('temperature', this.socketTemperatureUpdated.bind(this));
+    socket.on('feature', this.socketCircuitUpdated.bind(this)); 
+    socket.on('body', this.socketbodyUpdated.bind(this));
+    socket.on('temps', this.socketTempsUpdated.bind(this));
+    socket.on('controller', this.socketControllerUpdated.bind(this));
+    socket.on('pump', this.socketPumpUpdated.bind(this));
+
 };
 
-PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
-    //if (debug) this.log('FROM SOCKET CLIENT CIRCUIT: ' + JSON.stringify(circuitData, null, "\t"));
-    circuitData = circuitData.circuit
-    for (var i = 1; i <= Object.keys(circuitData).length; i++) {
-        //console.log("Analyzing circuit %s of %s", i, Object.keys(circuitData).length)
-        if (circuitData[i].numberStr !== undefined || circuitData[i].name !== "NOT USED") {
-            var id = "poolController." + circuitData[i].numberStr + "." + circuitData[i].name; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
-            var uuid = UUIDGen.generate(id);
-            var accessory = this.accessories[uuid];
-            var circuit = circuitData[i].number;
-            var circuitState = circuitData[i].status;
-            if (accessory !== undefined) {
-                accessory.updateCircuitState(circuitState); // All accessories should have a circuit state associated to them.
-            }
+PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
+    if (debug) this.log('FROM TEMP CLIENT: ' + JSON.stringify(tempData, null, "\t"));
 
-            var circuitFunction = circuitData[i].circuitFunction.toLowerCase()
-            // also send to heater
-            if (circuitFunction === "pool" || circuitFunction === "spa") {
-                id += '.heater'
-                uuid = UUIDGen.generate(id);
-                accessory = this.accessories[uuid];
-                if (accessory !== undefined) {
-                    accessory.updateCircuitState(circuitState); // All accessories should have a circuit state associated to them.
-                }
-            }
-        }
-    }
-};
-
-PoolControllerPlatform.prototype.socketTemperatureUpdated = function (temperatureData) {
-    //if (debug) this.log('FROM SOCKET CLIENT CIRCUIT: ' + JSON.stringify(temperatureData, null, "\t"));
+    /*
     temperatureData = temperatureData.temperature
     for (var uuid in this.accessories) {
         //console.log("Analyzing temperature %s of %s", i, Object.keys(temperatureData).length)
@@ -246,8 +227,67 @@ PoolControllerPlatform.prototype.socketTemperatureUpdated = function (temperatur
             this.accessories[uuid].updateTemperatureState(temperatureData); // All heaters should have a temperature state associated to them.
         }
     }
-}
+*/
+    
 
+};
+
+
+PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerData) {
+//    if (debug) this.log('FROM CONTROLLER CLIENT: ' + JSON.stringify(controllerData, null, "\t"));
+    
+
+};
+
+PoolControllerPlatform.prototype.socketPumpUpdated = function (pumpData) {
+    if (debug) this.log('FROM PUMP CLIENT: ' + JSON.stringify(pumpData, null, "\t"));
+    
+
+};
+
+PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
+    if (debug) this.log('FROM CIRCUIT CLIENT: ' + JSON.stringify(circuitData, null, "\t"));
+    var circuitNumber = circuitData.id;
+    var circuitFunction = circuitData.type.name.toLowerCase();
+    var circuitName = circuitData.name;
+    var circuitState = circuitData.isOn;
+    var updateCircuit=true
+
+    if (circuitName == "NOT USED" || circuitFunction == "spa" || circuitFunction == "pool") {
+        updateCircuit = false
+    }
+
+    if (this.skipAllUnInit && circuitName.substr(0,3)=="AUX") {
+        updateCircuit = false
+    }
+
+    if (this.skipAllUnInit && circuitName.substr(0,7).toLowerCase()=="feature") {
+        updateCircuit = false
+    }
+
+    if (updateCircuit) {
+        var id = "poolController." + circuitNumber + "." + circuitName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
+        if (cachedAccessory !== undefined) {
+            cachedAccessory.updateState(circuitState)
+        }
+
+    }
+};
+
+PoolControllerPlatform.prototype.socketbodyUpdated = function (bodyData) {
+    if (debug) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
+    var id = "poolController." + bodyData.circuit + "." + bodyData.name; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+
+    var uuid = UUIDGen.generate(id);
+    var cachedAccessory = this.accessories[uuid];
+    if (cachedAccessory !== undefined) {
+        cachedAccessory.updateState(bodyData)
+    }
+
+}
 
 PoolControllerPlatform.prototype.configureAccessory = function (accessory) {
     accessory.reachable = false; // Don't allow accessories to be controlled until we associate circuits/circuitState to them.
@@ -255,13 +295,13 @@ PoolControllerPlatform.prototype.configureAccessory = function (accessory) {
     console.log('%s (%s) - added to local current array from cache with UUID:%s ', accessory.displayName, accessory.id, accessory.UUID);
 };
 
-PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier, accessoryName, circuit, power, socket) {
+PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier, accessoryName, circuit, power, socket, platform) {
     this.log("Adding new circuit accessory with name " + accessoryName);
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Switch, accessoryName);
 
-    this.accessories[uuid] = new circuitAccessory(log, accessory, circuit, power, Homebridge, socket);
+    this.accessories[uuid] = new circuitAccessory(log, accessory, circuit, power, Homebridge, socket, platform);
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
 
     //get this info from socket? does it matter? also model and serial.
@@ -269,13 +309,42 @@ PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier
 
 };
 
-PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, accessoryName, circuit, power, socket) {
+PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, accessoryName, bodyData, socket, platform) {
+    this.log("Adding new pool body accessory with name " + accessoryName);
+    var uuid = UUIDGen.generate(identifier);
+    var accessory = new Accessory(accessoryName, uuid);
+    accessory.addService(Service.Switch, accessoryName);
+    accessory.addService(Service.TemperatureSensor, accessoryName + " Temp");
+    accessory.addService(Service.Thermostat, accessoryName + " Heater");
+
+
+    this.accessories[uuid] = new bodyAccessory(log, accessory, bodyData, Homebridge, socket, platform);
+    this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
+
+    //get this info from socket? does it matter? also model and serial.
+    accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
+    accessory.getService(Service.Thermostat).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
+    accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+        .setProps({
+            minValue: utils.F2C(40),
+            maxValue: utils.F2C(104),
+            minStep: 1
+      });
+      
+      accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
+        .setProps({
+          maxValue: Characteristic.TargetHeatingCoolingState.HEAT
+        })
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+};
+
+PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, accessoryName, circuit, power, socket, platform) {
     this.log("Adding new light accessory with name " + accessoryName);
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Lightbulb, accessoryName);
 
-    this.accessories[uuid] = new lightAccessory(log, accessory, circuit, power, Homebridge, socket);
+    this.accessories[uuid] = new lightAccessory(log, accessory, circuit, power, Homebridge, socket, platform);
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
 
     //get this info from socket? does it matter? also model and serial.
@@ -283,14 +352,93 @@ PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, 
 
 };
 
-PoolControllerPlatform.prototype.addHeaterAccessory = function (log, identifier, accessoryName, type, circuit, circuitState, heatMode, targetHeatingCoolingState, currentTemperature, targetTemperature, socket) {
-    this.log("Adding new heater accessory with name " + accessoryName);
-    var uuid = UUIDGen.generate(identifier);
-    var accessory = new Accessory(accessoryName, uuid);
-    accessory.addService(Service.Thermostat, accessoryName);
+PoolControllerPlatform.prototype.execute = async function (action, data)  {
+    const axios = require('axios').default;
+    var poolURL = this.config.ip_address
+    this.log("Executing request - server: %s, command: %s, data:", poolURL, action, data)
 
-    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+    let opts={
+            method: 'put',
+            data: data
+        }
+        switch(action) {
+            // CIRCUITS
+            case 'setCircuitState':
+                opts.url=`${ poolURL }/state/circuit/setState`
+                break;
+            case 'deleteCircuit':
+                opts.url=`${ poolURL }/config/circuit`
+                opts.method='DELETE';
+                break;
+            case 'setCircuit':
+                opts.url=`${ poolURL }/config/circuit`
+                break;
+            case 'toggleCircuit':
+                opts.url = `${poolURL}/state/circuit/toggleState`;
+                break
+            // DATE TIME
+            case 'setDateTime':
+                opts['url']=`${ poolURL }/config/dateTime`;
+                break;
+            // HEAT MODES
+            case 'setHeatMode':
+                opts.url=`${ poolURL }/state/body/heatMode`
+                break;
+            case 'setHeatSetPoint':
+                opts.url=`${ poolURL }/state/body/setPoint`
+                break;
+            case 'toggleHeatMode':
+                opts.url=`${ poolURL }/state/circuit/toggleState`
+                break;
+            // CHLORINATOR
+            case 'chlorSearch':
+                opts.method = 'get'
+                opts.url=`${ poolURL }/config/chlorinators/search`
+                break;
+            case 'setChlor':
+                opts.url=`${ poolURL }/state/chlorinator/setChlor`
+                break;
+            // APP OPTIONS
+            case 'setAppLoggerOptions':
+                opts.url=`${ poolURL }/app/logger/setOptions`
+                break;
+            case 'startPacketCapture':
+                opts.method = 'get'
+                opts.url = `${ poolURL }/app/config/startPacketCapture`
+                break;
+            case 'startPacketCaptureWithoutReset':
+                opts.method = 'get'
+                opts.url = `${ poolURL }/app/config/startPacketCaptureWithoutReset`
+                break;
+            case 'stopPacketCapture':
+                opts.method = 'get'
+                opts.responseType = 'blob'
+                opts.url = `${ poolURL }/app/config/stopPacketCapture`
+                break;
+            // LIGHT GROUPS
+            case 'setLightGroupTheme':
+                opts.url=`${ poolURL }/state/circuit/setTheme`
+                break;
+            case 'setLightGroupAttribs':
+                opts.url=`${ poolURL }/config/lightGroup`
+                break;
+            case 'configLightGroup':
+                opts.url=`${ poolURL }/config/lightGroup`
+                break;
+            // UTILITIES
+            default:
+                console.log(`missing API call ${action}`)
+                return Promise.reject(`missing API call ${action}`)
+        }
+        try {
+            this.log('sending air mail: ', opts)
+            let res=await axios(opts);
+            return res.data;
+        }
+        catch (err){
+            console.log(`Error fetching data: ${err.message}`);
+            return Promise.reject(err);
+        }
 
-    this.accessories[uuid] = new heaterAccessory(log, accessory, type, circuit, circuitState, heatMode, targetHeatingCoolingState, currentTemperature, targetTemperature, Homebridge, socket);
-    this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
-};
+    }
+  
