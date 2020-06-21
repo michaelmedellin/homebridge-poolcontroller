@@ -1,6 +1,6 @@
 var Accessory, Service, Characteristic, UUIDGen;
 
-var PoolCircuitAccessory = function(log, accessory, circuit, circuitState, homebridge, platform) {
+var PoolControllerAccessory = function(log, accessory, circuit, circuitState, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
@@ -26,7 +26,7 @@ this.updateState(circuitState)
   // accessory.updateReachability(true);
 }
 
-PoolCircuitAccessory.prototype.setCircuitState = function(circuitState, callback) {
+PoolControllerAccessory.prototype.setCircuitState = function(circuitState, callback) {
   if (this.debug) this.log("Setting Circuit", this.accessory.displayName, "to", circuitState, " from ", this.circuitState);
 
   if (this.circuitState !== circuitState) {
@@ -43,12 +43,12 @@ PoolCircuitAccessory.prototype.setCircuitState = function(circuitState, callback
 
 };
 
-PoolCircuitAccessory.prototype.getCircuitState = function(callback) {
+PoolControllerAccessory.prototype.getCircuitState = function(callback) {
   callback(null, this.circuitState);
 };
 
 // For when state is changed elsewhere.
-PoolCircuitAccessory.prototype.updateState = function(circuitState) {
+PoolControllerAccessory.prototype.updateState = function(circuitState) {
   if (this.circuitState !== circuitState) {
     if (this.debug) this.log("Update Circuit State for %s (state: %s-->%s)", this.accessory.displayName, this.circuitState, circuitState)
     this.circuitState = circuitState;
@@ -66,4 +66,4 @@ PoolCircuitAccessory.prototype.updateState = function(circuitState) {
   return
 };
 
-module.exports = PoolCircuitAccessory;
+module.exports = PoolControllerAccessory;

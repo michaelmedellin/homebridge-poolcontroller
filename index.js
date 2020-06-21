@@ -2,10 +2,8 @@ var Accessory, Service, Characteristic, UUIDGen, Homebridge;
 var io = require('socket.io-client');
 var ssdp = require('node-ssdp').Client
 var socket;
-var debug = true;
 var circuitAccessory = require('./circuitAccessory.js');
 var lightAccessory = require('./lightAccessory.js');
-// var heaterAccessory = require('./heaterAccessory.js');
 var bodyAccessory = require('./bodyAccessory.js');
 var utils = require('./utils.js')
 
@@ -27,7 +25,11 @@ function PoolControllerPlatform(log, config, api) {
     self.log = log;
     self.config = config;
     self.accessories = {};
-    self.skipAllUnInit = true;
+    self.skipAllUnInit = self.config.skipAllUnInit;
+    self.debug = self.config.debug
+
+    if (self.skipAllUnInit==undefined) self.skipAllUnInit = true;
+    if (self.debug==undefined) self.debug = false;
 
     //check config here.
     //check pool controller version
@@ -123,8 +125,8 @@ PoolControllerPlatform.prototype.validateVersion = function (URL) {
 }
 
 PoolControllerPlatform.prototype.InitialData = function (data) {
-    this.log("Got config packet")
-//    if (debug) this.log("InitialData:", data);
+//    this.log("Got config packet")
+    if (this.debug) this.log("InitialData: ", data);
     var circuitData = data.circuits.concat(data.features)
     var addCircuit = true
     var bodyData = data.temps.bodies
@@ -146,30 +148,36 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             addCircuit = false
         }
 
+        var circuitNumber = circuitData[i].id;
+        var circuitFunction = circuitData[i].type.name.toLowerCase();
+        var circuitName = circuitData[i].name;
+        var circuitState = circuitData[i].isOn;
+
+        if (addCircuit==false)
+            if (this.debug) this.log('Skipping circuit/accessory %s', circuitName)
         if (addCircuit) {
 
-            var circuitNumber = circuitData[i].id;
-            var circuitFunction = circuitData[i].type.name.toLowerCase();
-            var circuitName = circuitData[i].name;
-            var circuitState = circuitData[i].isOn;
             var id = "poolController." + circuitNumber + "." + circuitName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
 
             var uuid = UUIDGen.generate(id);
-            if (debug) this.log('in InitialData circuitFunction: %s, circuitNumber: %s, id: %s, uuid: %s', circuitFunction, circuitNumber, id, uuid)
             var cachedAccessory = this.accessories[uuid];
 
             // type === light
             if (['intellibrite', 'light', 'sam light', 'sal light', 'color wheel'].indexOf(circuitFunction) >= 0) {
                 if (cachedAccessory === undefined) {
-                    this.addLightAccessory(this.log, id, circuitName, circuitNumber, circuitState, socket, this);
+                    if (this.debug) this.log('Creating new light accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    this.addLightAccessory(this.log, id, circuitName, circuitNumber, circuitState, this);
                 } else {
-                    this.accessories[uuid] = new lightAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, socket, this);
+                    if (this.debug) this.log('Adding cached light accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    this.accessories[uuid] = new lightAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, this);
                 }
             } else {
                 if (cachedAccessory === undefined) {
-                    this.addCircuitAccessory(this.log, id, circuitName, circuitNumber, circuitState, socket, this);
+                    if (this.debug) this.log('Creating new circuit accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    this.addCircuitAccessory(this.log, id, circuitName, circuitNumber, circuitState, this);
                 } else {
-                    this.accessories[uuid] = new circuitAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, socket, this);
+                    if (this.debug) this.log('Using cached circuit accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    this.accessories[uuid] = new circuitAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, this);
                     }
                 }
             }        
@@ -184,13 +192,13 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             var cachedAccessory = this.accessories[uuid];
 
             if (cachedAccessory === undefined) {
-                if (debug) this.log('Adding new body: %s', bodyName)
+                if (this.debug) this.log('Adding new body: %s', bodyName)
 
-                this.addBodyAccessory(this.log, id, bodyName, bodyData[i], socket, this );
+                this.addBodyAccessory(this.log, id, bodyName, bodyData[i], this );
             } else {
-                if (debug) this.log('Adding cached body: %s', bodyName)
+                if (this.debug) this.log('Using cached body: %s', bodyName)
 
-                this.accessories[uuid] = new bodyAccessory(this.log, cachedAccessory, bodyData[i], Homebridge, socket, this)
+                this.accessories[uuid] = new bodyAccessory(this.log, cachedAccessory, bodyData[i], Homebridge, this)
             }
 
         }
@@ -211,14 +219,19 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     socket.on('feature', this.socketCircuitUpdated.bind(this)); 
     socket.on('body', this.socketbodyUpdated.bind(this));
     socket.on('temps', this.socketTempsUpdated.bind(this));
-    socket.on('controller', this.socketControllerUpdated.bind(this));
-    socket.on('pump', this.socketPumpUpdated.bind(this));
+//    socket.on('controller', this.socketControllerUpdated.bind(this));
+//    socket.on('pump', this.socketPumpUpdated.bind(this));
 
 };
 
 PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
     if (debug) this.log('FROM TEMP CLIENT: ' + JSON.stringify(tempData, null, "\t"));
+    allbodyData = tempData.bodies
 
+    for (var i in allbodyData) {
+        if (this.debug) this.log('Updating temp (and all) data for body: ', allbodyData[i].name)
+        this.socketbodyUpdated(allbodyData[i])
+    }
     /*
     temperatureData = temperatureData.temperature
     for (var uuid in this.accessories) {
@@ -240,13 +253,13 @@ PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerD
 };
 
 PoolControllerPlatform.prototype.socketPumpUpdated = function (pumpData) {
-    if (debug) this.log('FROM PUMP CLIENT: ' + JSON.stringify(pumpData, null, "\t"));
+    if (this.debug) this.log('FROM PUMP CLIENT: ' + JSON.stringify(pumpData, null, "\t"));
     
 
 };
 
 PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
-    if (debug) this.log('FROM CIRCUIT CLIENT: ' + JSON.stringify(circuitData, null, "\t"));
+    if (this.debug) this.log('FROM CIRCUIT CLIENT: ' + JSON.stringify(circuitData, null, "\t"));
     var circuitNumber = circuitData.id;
     var circuitFunction = circuitData.type.name.toLowerCase();
     var circuitName = circuitData.name;
@@ -278,7 +291,7 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
 };
 
 PoolControllerPlatform.prototype.socketbodyUpdated = function (bodyData) {
-    if (debug) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
+    if (this.debug) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
     var id = "poolController." + bodyData.circuit + "." + bodyData.name; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
 
     var uuid = UUIDGen.generate(id);
@@ -295,13 +308,12 @@ PoolControllerPlatform.prototype.configureAccessory = function (accessory) {
     console.log('%s (%s) - added to local current array from cache with UUID:%s ', accessory.displayName, accessory.id, accessory.UUID);
 };
 
-PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier, accessoryName, circuit, power, socket, platform) {
-    this.log("Adding new circuit accessory with name " + accessoryName);
+PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier, accessoryName, circuit, power, platform) {
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Switch, accessoryName);
 
-    this.accessories[uuid] = new circuitAccessory(log, accessory, circuit, power, Homebridge, socket, platform);
+    this.accessories[uuid] = new circuitAccessory(log, accessory, circuit, power, Homebridge, platform);
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
 
     //get this info from socket? does it matter? also model and serial.
@@ -309,8 +321,7 @@ PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier
 
 };
 
-PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, accessoryName, bodyData, socket, platform) {
-    this.log("Adding new pool body accessory with name " + accessoryName);
+PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, accessoryName, bodyData, platform) {
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Switch, accessoryName);
@@ -318,10 +329,9 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
     accessory.addService(Service.Thermostat, accessoryName + " Heater");
 
 
-    this.accessories[uuid] = new bodyAccessory(log, accessory, bodyData, Homebridge, socket, platform);
+    this.accessories[uuid] = new bodyAccessory(log, accessory, bodyData, Homebridge, platform);
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
 
-    //get this info from socket? does it matter? also model and serial.
     accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
     accessory.getService(Service.Thermostat).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
     accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
@@ -338,16 +348,27 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
 };
 
-PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, accessoryName, circuit, power, socket, platform) {
-    this.log("Adding new light accessory with name " + accessoryName);
+PoolControllerPlatform.prototype.addControllerAccessory = function (log, identifier, accessoryName, circuit, power, platform) {
+    var uuid = UUIDGen.generate(identifier);
+    var accessory = new Accessory(accessoryName, uuid);
+    accessory.addService(Service.TemperatureSensor, "Air temp");
+    accessory.addService(Service.TemperatureSensor, "Water body temp");
+//    accessory.addService(Service.)
+    this.accessories[uuid] = new lightAccessory(log, accessory, circuit, power, Homebridge, platform);
+    this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
+
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+
+};
+
+PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, accessoryName, circuit, power, platform) {
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Lightbulb, accessoryName);
 
-    this.accessories[uuid] = new lightAccessory(log, accessory, circuit, power, Homebridge, socket, platform);
+    this.accessories[uuid] = new lightAccessory(log, accessory, circuit, power, Homebridge, platform);
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
 
-    //get this info from socket? does it matter? also model and serial.
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
 
 };
@@ -431,7 +452,7 @@ PoolControllerPlatform.prototype.execute = async function (action, data)  {
                 return Promise.reject(`missing API call ${action}`)
         }
         try {
-            this.log('sending air mail: ', opts)
+            if (this.debug) this.log('Sending command to pool controller server: ', opts)
             let res=await axios(opts);
             return res.data;
         }

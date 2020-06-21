@@ -1,0 +1,38 @@
+{
+  "pluginAlias": "PoolControllerPlatform",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Plugin to connect nodejs poolController next branch to homebridge. Provide protocol, ip address and port of server to connect to.",
+  "footerDisplay": "Optional content to display below the plugin config. Supports markdown.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "ip_address": {
+        "title": "PoolController server and port",
+        "type": "string",
+        "required": true,
+        "default": "*"
+      },
+      "secure": {
+        "title": "Use secure connection",
+        "type": "boolean",
+        "required": true,
+        "default": false
+      },
+      "skipAllUnInit": {
+        "title": "Skip potentially unused Aux or Feature circuits",
+        "type": "boolean",
+        "required": true,
+        "default": true
+      },
+      "debug": {
+        "title": "Activate debug logging?",
+        "type": "boolean",
+        "required": false,
+        "default": false
+      }
+    }
+  },
+  "form": null,
+  "display": null
+}

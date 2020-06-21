@@ -1,7 +1,6 @@
 var Accessory, Service, Characteristic, UUIDGen;
-var debug = false;
 
-var PoolCircuitAccessory = function(log, accessory, circuit, circuitState, homebridge, socket, platform) {
+var PoolCircuitAccessory = function(log, accessory, circuit, circuitState, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
@@ -13,8 +12,8 @@ var PoolCircuitAccessory = function(log, accessory, circuit, circuitState, homeb
   this.circuit = circuit;
   this.circuitState = circuitState;
   this.service = this.accessory.getService(Service.Lightbulb);
-  this.socket = socket;
   this.platform = platform;
+  this.debug = platform.debug
 
   if (this.service) {
     this.service
@@ -28,7 +27,7 @@ var PoolCircuitAccessory = function(log, accessory, circuit, circuitState, homeb
  }
 
 PoolCircuitAccessory.prototype.setCircuitState = function(circuitState, callback) {
-  this.log("Setting Circuit", this.accessory.displayName, "to", circuitState, " from ", this.circuitState);
+  if (this.debug) this.log("Setting Circuit", this.accessory.displayName, "to", circuitState, " from ", this.circuitState);
   if (this.circuitState !== circuitState) {
 
     this.platform.execute("toggleCircuit", {id: this.circuit})
@@ -49,7 +48,7 @@ PoolCircuitAccessory.prototype.getCircuitState = function(callback) {
 // For when state is changed elsewhere.
 PoolCircuitAccessory.prototype.updateState = function(circuitState) {
   if (this.circuitState !== circuitState) {
-    this.log("Update Light State for %s (state: %s-->%s)", this.accessory.displayName, this.circuitState, circuitState)
+    if (this.debug) this.log("Update Light State for %s (state: %s-->%s)", this.accessory.displayName, this.circuitState, circuitState)
     this.circuitState = circuitState;
 
     // since this is being called internally (via the socket initiation), call the function that will call the callback

@@ -1,17 +1,17 @@
 var Accessory, Service, Characteristic, UUIDGen;
-var debug = false;
+//var debug = false;
 var utils = require('./utils.js')
 
-var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, socket, platform) {
+var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
   Homebridge = homebridge;
+  debug = platform.debug;
 
   this.accessory = accessory;
   this.log = log;
-  this.socket = socket;
 
 /*
   this.circuit = circuit;
@@ -86,7 +86,7 @@ PoolBodyAccessory.prototype.getThermoState = function(callback) {
 PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback) {
   if (this.bodyData.setPoint !== utils.F2C(newSetPoint)) {
 
-    this.log("Setting Body Setpoint", this.accessory.displayName, "to", utils.F2C(newSetPoint));
+    if (this.debug) this.log("Setting Body Setpoint", this.accessory.displayName, "to", utils.F2C(newSetPoint));
     //this.socket.emit("toggleCircuit", this.circuit);
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newSetPoint);
 
@@ -97,7 +97,7 @@ PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback
 PoolBodyAccessory.prototype.setCircuitState = function(newCircuitState, callback) {
   if (this.bodyData.isOn !== newCircuitState) {
 
-    this.log("Setting Body", this.accessory.displayName, "to", newCircuitState);
+    if (this.debug) this.log("Setting Body", this.accessory.displayName, "to", newCircuitState);
     this.platform.execute("toggleCircuit", {id: this.bodyData.circuit})
     //    this.socket.emit("toggleCircuit", this.circuit);
     //this.updateCircuitState(circuitState);
@@ -125,7 +125,6 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
     this.accessory.getService(Service.TemperatureSensor).getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(utils.F2C(this.bodyData.temp))
 
-    this.log('body data temp ', this.bodyData.temp)
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(utils.F2C(this.bodyData.temp))
 
