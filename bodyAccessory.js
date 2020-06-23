@@ -87,7 +87,12 @@ PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback
   if (this.bodyData.setPoint !== utils.F2C(newSetPoint)) {
 
     if (this.debug) this.log("Setting Body Setpoint", this.accessory.displayName, "to", utils.F2C(newSetPoint));
+    var data
+    data.body.id = this.bodyData.circuit
+    data.body.setPoint = this.bodyData.bodySetPoint
+
     //this.socket.emit("toggleCircuit", this.circuit);
+    this.platform.execute("setHeatSetPoint", data)
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newSetPoint);
 
   }
