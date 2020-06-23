@@ -86,8 +86,8 @@ PoolBodyAccessory.prototype.getThermoState = function(callback) {
 PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback) {
   if (this.bodyData.setPoint !== utils.F2C(newSetPoint)) {
 
-    if (this.debug) this.log("Setting Body Setpoint", this.accessory.displayName, "to", utils.F2C(newSetPoint));
-    var data = {body: {id: this.bodyData.id, setPoint: newSetPoint}}
+    this.log("Setting Body Setpoint", this.accessory.displayName, "to", utils.C2F(newSetPoint));
+    var data = {body: {id: this.bodyData.id, setPoint: utils.C2F(newSetPoint)}}
 
     //this.socket.emit("toggleCircuit", this.circuit);
     this.platform.execute("setHeatSetPoint", data)
