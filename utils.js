@@ -47,3 +47,5 @@ exports.F2C = F2C
 exports.C2F = C2F
 exports.HeatingState = HeatingState
 exports.HeatingMode = HeatingMode
+exports.HK_Mode = HK_Mode
+exports.HK_State = HK_State
