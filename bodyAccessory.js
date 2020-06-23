@@ -49,10 +49,10 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
         .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
         .on('get', this.getThermoState.bind(this));
 
-//        this.service
-//        .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-//        .on('set', this.setThermoTargetState.bind(this))
-//        .on('get', this.getThermoTargetState.bind(this));
+        this.service
+        .getCharacteristic(Characteristic.TargetHeatingCoolingState)
+        .on('set', this.setThermoTargetState.bind(this))
+        .on('get', this.getThermoTargetState.bind(this));
 
         this.service
         .getCharacteristic(Characteristic.TargetTemperature)
@@ -90,28 +90,28 @@ PoolBodyAccessory.prototype.getCircuitState = function(callback) {
 };
 
 PoolBodyAccessory.prototype.getCurrentTemp = function(callback) {
-  callback(null, utils.F2C(this.bodyTemp));
+  callback(null, utils.F2C(this.bodyData.temp));
 };
 
 // Thermostat
 
 PoolBodyAccessory.prototype.getThermoCurrTemp = function(callback) {
-  callback(null, utils.F2C(this.bodyTemp));
+  callback(null, utils.F2C(this.bodyData.temp));
 };
 
 PoolBodyAccessory.prototype.getThermoTargetTemp = function(callback) {
-  callback(null, utils.F2C(this.bodySetPoint));
+  callback(null, utils.F2C(this.bodyData.setPoint));
 };
 
 PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback) {
   if (this.bodyData.setPoint !== utils.C2F(newSetPoint)) {
 
-    this.log("Setting Body Setpoint", this.accessory.displayName, "to", utils.C2F(newSetPoint));
+    this.log("Setting Body Setpoint", this.accessory.displayName, "to", Math.round(utils.C2F(newSetPoint)));
     //var data = {body: {id: , setPoint: utils.C2F(newSetPoint)}}
 
     //this.socket.emit("toggleCircuit", this.circuit);
-    this.platform.execute("setHeatSetPoint", {id: this.id, setPoint: utils.C2F(newSetPoint)})
-    this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newSetPoint);
+    this.platform.execute("setHeatSetPoint", {id: this.bodyData.id, setPoint: Math.round(utils.C2F(newSetPoint))})
+    this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(utils.F2C(Math.round(utils.F2C(newSetPoint))));
 
   }
   callback();
@@ -123,14 +123,14 @@ PoolBodyAccessory.prototype.getThermoState = function(callback) {
 };
 
 PoolBodyAccessory.prototype.getThermoTargetState = function(callback) {
-  callback(null, utils.HeatingMode(this.bodyHeatMode, Characteristic));  
+  callback(null, utils.HeatingMode(this.bodyData.heatMode, Characteristic));  
 };
 
 PoolBodyAccessory.prototype.setThermoTargetState = function(newTargetState, callback) {
 
-    this.log("Setting Body Target State", this.accessory.displayName, "to", utils.HeatingState(newTargetState));
+    this.log("Setting Body Target State", this.accessory.displayName, "to", newTargetState);
 
-    this.platform.execute("heatMode", {id: this.id, mode: utils.HK_Mode(newTargetState)})
+    this.platform.execute("setHeatMode", {id: this.bodyData.id, mode: utils.HK_Mode(newTargetState, Characteristic)})
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newTargetState);
 
   callback();
