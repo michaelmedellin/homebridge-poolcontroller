@@ -26,6 +26,7 @@ function PoolControllerPlatform(log, config, api) {
     self.config = config;
     self.accessories = {};
     self.skipAllUnInit = self.config.skipAllUnInit;
+    self.skipCircuitNames = self.config.skipCircuitNames || [];
     self.debug = self.config.debug
 
     if (self.skipAllUnInit==undefined) self.skipAllUnInit = true;
@@ -145,6 +146,10 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         }
 
         if (this.skipAllUnInit && circuitData[i].name.substr(0,7).toLowerCase()=="feature") {
+            addCircuit = false
+        }
+
+        if (this.skipCircuitNames.includes(circuitData[i].name)) {
             addCircuit = false
         }
 
@@ -275,6 +280,10 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
     }
 
     if (this.skipAllUnInit && circuitName.substr(0,7).toLowerCase()=="feature") {
+        updateCircuit = false
+    }
+
+    if (this.skipCircuitNames.includes(circuitName)) {
         updateCircuit = false
     }
 
@@ -461,5 +470,5 @@ PoolControllerPlatform.prototype.execute = async function (action, data)  {
             return Promise.reject(err);
         }
 
-    }
+};
   
