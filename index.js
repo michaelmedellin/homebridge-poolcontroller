@@ -5,11 +5,13 @@ var socket;
 var circuitAccessory = require('./circuitAccessory.js');
 var lightAccessory = require('./lightAccessory.js');
 var bodyAccessory = require('./bodyAccessory.js');
+var pumpAccessory = require('./pumpAccessory.js');
+
 var utils = require('./utils.js')
 
 module.exports = function (homebridge) {
     //check homebridge version
-
+    
     Accessory = homebridge.platformAccessory;
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
@@ -20,6 +22,7 @@ module.exports = function (homebridge) {
 };
 
 function PoolControllerPlatform(log, config, api) {
+
     var self = this;
     log("Loading PoolControllerPlatform");
     self.log = log;
@@ -131,6 +134,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     var circuitData = data.circuits.concat(data.features)
     var addCircuit = true
     var bodyData = data.temps.bodies
+    var pumpData = data.pumps
     var tempData = data.temps
 
 //    this.log("Count of circuits", circuitData)
@@ -208,6 +212,30 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
 
         }
 
+// add pumps
+        for (var i in pumpData) {
+
+            var pumpNumber = pumpData[i].id
+            var pumpName = pumpData[i].type.desc
+            var id = "poolController." + pumpNumber + "." + pumpName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+            var uuid = UUIDGen.generate(id);
+            var cachedAccessory = this.accessories[uuid];
+            var pumpUpdateTimer
+
+            if (pumpData[i].type.hasAddress == true) {
+                if (cachedAccessory === undefined) {
+                    if (this.debug) this.log('Adding new pump: %s', pumpName)
+
+                    this.addPumpAccessory(this.log, id, pumpName, pumpData[i], this );
+                } else {
+                    if (this.debug) this.log('Using cached pump: %s', pumpName)
+
+                    this.accessories[uuid] = new pumpAccessory(this.log, cachedAccessory, pumpData[i], Homebridge, this)
+                }
+            }
+        }
+
+
         var id = "poolController.0.Controller"; 
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
@@ -225,7 +253,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     socket.on('body', this.socketbodyUpdated.bind(this));
     socket.on('temps', this.socketTempsUpdated.bind(this));
 //    socket.on('controller', this.socketControllerUpdated.bind(this));
-//    socket.on('pump', this.socketPumpUpdated.bind(this));
+    socket.on('pump', this.socketPumpUpdated.bind(this));
 
 };
 
@@ -259,7 +287,14 @@ PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerD
 
 PoolControllerPlatform.prototype.socketPumpUpdated = function (pumpData) {
     if (this.debug) this.log('FROM PUMP CLIENT: ' + JSON.stringify(pumpData, null, "\t"));
-    
+    var pumpNumber = pumpData.id
+    var pumpName = pumpData.type.desc
+    var id = "poolController." + pumpNumber + "." + pumpName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+    var uuid = UUIDGen.generate(id);
+    var cachedAccessory = this.accessories[uuid];
+    if (cachedAccessory !== undefined) {
+        cachedAccessory.updateState(pumpData)
+    }
 
 };
 
@@ -356,6 +391,57 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
         })
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
 };
+
+PoolControllerPlatform.prototype.addPumpAccessory = function (log, identifier, accessoryName, pumpData, platform) {
+    var customtypes = require('./customTypes.js')
+    var CustomTypes = new customtypes(Homebridge)
+    var uuid = UUIDGen.generate(identifier);
+    var accessory = new Accessory(accessoryName, uuid);
+
+    accessory.addService(Service.Fan, accessoryName);
+    
+    accessory.getService(Service.Fan).addCharacteristic(Characteristic.RotationSpeed)
+    accessory.getService(Service.Fan).addCharacteristic(CustomTypes.CurrentPowerConsumption)
+    accessory.getService(Service.Fan).addCharacteristic(CustomTypes.TotalConsumption)
+    accessory.getService(Service.Fan).addCharacteristic(CustomTypes.ResetTotal)
+    accessory.getService(Service.Fan).addCharacteristic(CustomTypes.PumpGPM)
+    accessory.getService(Service.Fan).addCharacteristic(CustomTypes.PumpRPM)
+    accessory.getService(Service.Fan).getCharacteristic(Characteristic.On)
+    .setProps({
+        perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+
+    })
+    accessory.getService(Service.Fan).getCharacteristic(Characteristic.RotationSpeed)
+    .setProps({
+        perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+
+    })
+
+    this.accessories[uuid] = new pumpAccessory(log, accessory, pumpData, Homebridge, platform);
+    this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.SerialNumber, uuid);
+
+//    this.service.addCharacteristic()
+
+    /*
+    accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
+    accessory.getService(Service.Thermostat).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
+    accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+        .setProps({
+            minValue: utils.F2C(40),
+            maxValue: utils.F2C(104),
+            minStep: 1
+      });
+      
+      accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
+        .setProps({
+          maxValue: Characteristic.TargetHeatingCoolingState.HEAT
+        })
+        */
+
+};
+
 
 PoolControllerPlatform.prototype.addControllerAccessory = function (log, identifier, accessoryName, circuit, power, platform) {
     var uuid = UUIDGen.generate(identifier);
@@ -470,5 +556,7 @@ PoolControllerPlatform.prototype.execute = async function (action, data)  {
             return Promise.reject(err);
         }
 
+
 };
   
+=======
