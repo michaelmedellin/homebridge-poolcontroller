@@ -25,6 +25,15 @@
         "required": true,
         "default": true
       },
+      "skipCircuitNames": {
+        "title": "Circuits to skip",
+        "type": "array",
+        "required": false,
+        "items": {
+          "title": "Circuit name",
+          "type": "string"
+        }
+      },
       "debug": {
         "title": "Activate debug logging?",
         "type": "boolean",
