@@ -45,10 +45,6 @@ var PoolPumpAccessory = function(log, accessory, pumpData, homebridge, platform)
       this.service
       .getCharacteristic(CustomTypes.PumpRPM)
       .on('get', this.getPumpRPM.bind(this))
-//      platform.log('services 2 ', this.accessory.services[2])
-//      platform.log('logging service ', this.loggingService)
-
-      this.loggingService.addEntry({time: moment().unix(), power: this.pumpData.watts});
     }
 
     
