@@ -10,13 +10,15 @@ var PoolPumpAccessory = function(log, accessory, pumpData, homebridge, platform)
   UUIDGen = homebridge.hap.uuid;
   Homebridge = homebridge;
 
+  this.accessory = accessory;
+  this.log = log;
+  this.accessory.log = log
+
   var customtypes = require('./customTypes.js')
   var CustomTypes = new customtypes(Homebridge)
   var FakeGatoHistoryService = require('fakegato-history')(homebridge);
-  this.loggingService = new FakeGatoHistoryService("energy", accessory);
+  this.loggingService = new FakeGatoHistoryService("energy", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
 
-  this.accessory = accessory;
-  this.log = log;
 
   this.pumpData = pumpData
   this.platform = platform
@@ -43,6 +45,8 @@ var PoolPumpAccessory = function(log, accessory, pumpData, homebridge, platform)
       this.service
       .getCharacteristic(CustomTypes.PumpRPM)
       .on('get', this.getPumpRPM.bind(this))
+//      platform.log('services 2 ', this.accessory.services[2])
+//      platform.log('logging service ', this.loggingService)
 
       this.loggingService.addEntry({time: moment().unix(), power: this.pumpData.watts});
     }
@@ -106,10 +110,9 @@ PoolPumpAccessory.prototype.updateState = function(newpumpData) {
 
       this.loggingService.addEntry({time: moment().unix(), power: this.pumpData.watts});
 
-      var interval = 1 * 60 * 1000
+      var interval = 5 * 60 * 1000
       clearTimeout(this.pumpUpdateTimer)
       this.pumpUpdateTimer = setInterval(function(platform, loggingService, pumpData) {
-          platform.log('Adding power log entry for pump watts', pumpData.watts)
           loggingService.addEntry({time: moment().unix(), power: pumpData.watts})
       }, interval, this.platform, this.loggingService, this.pumpData)
 

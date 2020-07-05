@@ -13,14 +13,6 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
   this.accessory = accessory;
   this.log = log;
 
-/*
-  this.circuit = circuit;
-  this.circuitState = circuitState;
-  this.bodySetPoint = bodySetPoint
-  this.bodyTemp = bodyTemp
-  this.bodyHeatMode = bodyHeatMode
-  this.bodyHeatStatus = bodyHeatStatus
- */
   this.bodyData = bodyData
   this.platform = platform
 
@@ -142,7 +134,6 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
 
     this.bodyData = newbodyData;
     this.platform.log('Updating body values - heat status ', this.bodyData.heatStatus)
-    this.platform.log('Translated ', utils.HeatingState(this.bodyData.heatStatus, Characteristic))
     this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On)
       .updateValue(this.bodyData.isOn); 
 

@@ -397,7 +397,7 @@ PoolControllerPlatform.prototype.addPumpAccessory = function (log, identifier, a
     var CustomTypes = new customtypes(Homebridge)
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
-
+  
     accessory.addService(Service.Fan, accessoryName);
     
     accessory.getService(Service.Fan).addCharacteristic(Characteristic.RotationSpeed)
@@ -421,24 +421,6 @@ PoolControllerPlatform.prototype.addPumpAccessory = function (log, identifier, a
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.SerialNumber, uuid);
-
-//    this.service.addCharacteristic()
-
-    /*
-    accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
-    accessory.getService(Service.Thermostat).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
-    accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
-        .setProps({
-            minValue: utils.F2C(40),
-            maxValue: utils.F2C(104),
-            minStep: 1
-      });
-      
-      accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
-        .setProps({
-          maxValue: Characteristic.TargetHeatingCoolingState.HEAT
-        })
-        */
 
 };
 
