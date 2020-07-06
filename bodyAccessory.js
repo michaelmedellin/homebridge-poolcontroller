@@ -133,7 +133,8 @@ PoolBodyAccessory.prototype.setThermoTargetState = function(newTargetState, call
 PoolBodyAccessory.prototype.updateState = function(newbodyData) {
 
     this.bodyData = newbodyData;
- //   this.platform.log('Updating body values - heat status ', this.bodyData.heatStatus)
+    this.platform.log('Updating body values - heat status ', utils.HeatingState(this.bodyData.heatStatus, Characteristic))
+    this.platform.log('Updating body values - heat mode ', utils.HeatingMode(this.bodyData.heatMode, Characteristic))
     this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On)
       .updateValue(this.bodyData.isOn); 
 
