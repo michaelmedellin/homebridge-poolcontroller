@@ -163,8 +163,8 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
       var interval = 5 * 60 * 1000
       clearTimeout(this.bodyStateTimer)
       this.bodyStateTimer = setInterval(function(platform, loggingService, state) {
-        platform.log('setting body state on fake_gato ', state)  
-        loggingService.addEntry({time: moment().unix(), status: state})
+        platform.log('setting body state on fake_gato ', state ? 1 : 0)  
+        loggingService.addEntry({time: moment().unix(), status: state? 1 : 0})
       }, interval, this.platform, this.loggingService, this.bodyData.isOn)
 
       this.loggingService.addEntry({time: moment().unix(), temp: utils.F2C(this.bodyData.temp)});
