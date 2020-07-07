@@ -375,10 +375,11 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
 PoolControllerPlatform.prototype.socketbodyUpdated = function (bodyData) {
     if (this.debug) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
     var id = "poolController." + bodyData.circuit + "." + bodyData.name; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
-
+    if (this.debug) this.log('Preparing to update data for body ', bodyData.name)
     var uuid = UUIDGen.generate(id);
     var cachedAccessory = this.accessories[uuid];
     if (cachedAccessory !== undefined) {
+        if (this.debug) this.log('Updating data for body ', bodyData.name)
         cachedAccessory.updateState(bodyData)
     }
 

@@ -19,6 +19,7 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
   var CustomTypes = new customtypes(Homebridge)
   var FakeGatoHistoryService = require('fakegato-history')(homebridge);
   this.loggingService = new FakeGatoHistoryService("weather", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
+  this.SWloggingService = new FakeGatoHistoryService("switch", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
 
   this.bodyData = bodyData
   this.platform = platform
@@ -159,13 +160,13 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
 
-      this.loggingService.addEntry({time: moment().unix(), status: this.bodyData.isOn});
+      this.SWloggingService.addEntry({time: moment().unix(), status: this.bodyData.isOn});
       var interval = 5 * 60 * 1000
       clearTimeout(this.bodyStateTimer)
-      this.bodyStateTimer = setInterval(function(platform, loggingService, state) {
+      this.bodyStateTimer = setInterval(function(platform, SWloggingService, state) {
         platform.log('setting body state on fake_gato ', state ? 1 : 0)  
-        loggingService.addEntry({time: moment().unix(), status: state? 1 : 0})
-      }, interval, this.platform, this.loggingService, this.bodyData.isOn)
+        SWloggingService.addEntry({time: moment().unix(), status: state? 1 : 0})
+      }, interval, this.platform, this.SWloggingService, this.bodyData.isOn)
 
       this.loggingService.addEntry({time: moment().unix(), temp: utils.F2C(this.bodyData.temp)});
       var interval = 5 * 60 * 1000
