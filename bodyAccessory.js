@@ -12,6 +12,12 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
 
   this.accessory = accessory;
   this.log = log;
+  this.accessory.log = log;
+
+  var customtypes = require('./customTypes.js')
+  var CustomTypes = new customtypes(Homebridge)
+  var FakeGatoHistoryService = require('fakegato-history')(homebridge);
+  this.loggingService = new FakeGatoHistoryService("weather", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
 
   this.bodyData = bodyData
   this.platform = platform
@@ -64,9 +70,6 @@ PoolBodyAccessory.prototype.setCircuitState = function(newCircuitState, callback
 
     if (this.debug) this.log("Setting Body", this.accessory.displayName, "to", newCircuitState);
     this.platform.execute("toggleCircuit", {id: this.bodyData.circuit})
-    //    this.socket.emit("toggleCircuit", this.circuit);
-    //this.updateCircuitState(circuitState);
-    //this following line will update the value without the internal callback to getCircuitState
     this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On).updateValue(newCircuitState);
 
   }
@@ -99,9 +102,7 @@ PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback
   if (this.bodyData.setPoint !== utils.C2F(newSetPoint)) {
 
     this.log("Setting Body Setpoint", this.accessory.displayName, "to", Math.round(utils.C2F(newSetPoint)));
-    //var data = {body: {id: , setPoint: utils.C2F(newSetPoint)}}
 
-    //this.socket.emit("toggleCircuit", this.circuit);
     this.platform.execute("setHeatSetPoint", {id: this.bodyData.id, setPoint: Math.round(utils.C2F(newSetPoint))})
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(utils.F2C(Math.round(utils.F2C(newSetPoint))));
 
@@ -152,6 +153,14 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
 
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
+
+      this.loggingService.addEntry({time: moment().unix(), temp: utils.F2C(this.bodyData.temp)});
+
+      var interval = 5 * 60 * 1000
+      clearTimeout(this.tempUpdateTimer)
+      this.tempUpdateTimer = setInterval(function(platform, loggingService, tempData) {
+          loggingService.addEntry({time: moment().unix(), temp: utils.F2C(tempData)})
+      }, interval, this.platform, this.loggingService, this.bodyData.temp)
 
   return
 }
