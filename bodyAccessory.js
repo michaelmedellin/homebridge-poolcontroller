@@ -1,6 +1,7 @@
 var Accessory, Service, Characteristic, UUIDGen;
 //var debug = false;
 var utils = require('./utils.js')
+var moment = require('moment');
 
 var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
@@ -132,6 +133,9 @@ PoolBodyAccessory.prototype.setThermoTargetState = function(newTargetState, call
 
 // For when state is changed elsewhere.
 PoolBodyAccessory.prototype.updateState = function(newbodyData) {
+  var customtypes = require('./customTypes.js')
+  var CustomTypes = new customtypes(Homebridge)
+
 
     this.bodyData = newbodyData;
 //    this.platform.log('Updating body values - heat status ', utils.HeatingState(this.bodyData.heatStatus, Characteristic))
