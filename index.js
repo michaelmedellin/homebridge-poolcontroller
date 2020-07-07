@@ -7,6 +7,7 @@ var lightAccessory = require('./lightAccessory.js');
 var bodyAccessory = require('./bodyAccessory.js');
 var pumpAccessory = require('./pumpAccessory.js');
 var controllerAccessory = require('./controllerAccessory.js')
+var tempAccessory = require('./tempAccessory.js')
 
 var utils = require('./utils.js')
 
@@ -242,17 +243,36 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         controllerData = {}
         controllerData.delay = data.delay
         controllerData.mode = data.mode
-        this.log('accessory name ', data.equipment.model)
 
         if (cachedAccessory === undefined) 
             this.addControllerAccessory(this.log, id, data.equipment.model, controllerData , this);
         else {
-            if (debug) this.log('Adding cached body: %s', bodyName)
+            if (debug) this.log('Adding cached controller: %s', data.equipment.model)
             this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData , Homebridge, this)
         }
 
 // add temp accessories
+    var id = "poolController.A.AirTemp"; 
+    var uuid = UUIDGen.generate(id);
+    var cachedAccessory = this.accessories[uuid];
 
+    if (cachedAccessory === undefined) 
+        this.addTempAccessory(this.log, id, "Air Temperature", tempData.air , this);
+    else {
+        if (debug) this.log('Adding cached temp sensor: Air Temperature')
+        this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.air , Homebridge, this)
+    }
+
+    var id = "poolController.B.WaterTemp"; 
+    var uuid = UUIDGen.generate(id);
+    var cachedAccessory = this.accessories[uuid];
+
+    if (cachedAccessory === undefined) 
+        this.addTempAccessory(this.log, id, "Water Sensor", tempData.waterSensor1 , this);
+    else {
+        if (debug) this.log('Adding cached sensor: Water Temperature')
+        this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.waterSensor1 , Homebridge, this)
+}
 
 
     socket.on('circuit', this.socketCircuitUpdated.bind(this));
@@ -273,6 +293,20 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
         this.socketbodyUpdated(allbodyData[i])
     }
     
+    var id = "poolController.A.AirTemp"; 
+    var uuid = UUIDGen.generate(id);
+    var cachedAccessory = this.accessories[uuid];
+    if (cachedAccessory !== undefined) {
+        cachedAccessory.updateState(tempData.air)
+    }
+
+    var id = "poolController.B.WaterTemp"; 
+    var uuid = UUIDGen.generate(id);
+    var cachedAccessory = this.accessories[uuid];
+    if (cachedAccessory !== undefined) {
+        cachedAccessory.updateState(tempData.waterSensor1)
+    }
+
 
 };
 
@@ -394,6 +428,20 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
           maxValue: Characteristic.TargetHeatingCoolingState.HEAT
         })
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+};
+PoolControllerPlatform.prototype.addTempAccessory = function (log, identifier, accessoryName, tempData, platform) {
+    var customtypes = require('./customTypes.js')
+    var CustomTypes = new customtypes(Homebridge)
+    var uuid = UUIDGen.generate(identifier);
+    var accessory = new Accessory(accessoryName, uuid);
+  
+    accessory.addService(Service.TemperatureSensor, accessoryName);
+
+    this.accessories[uuid] = new tempAccessory(log, accessory, tempData, Homebridge, platform);
+    this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.SerialNumber, uuid);
+
 };
 
 PoolControllerPlatform.prototype.addPumpAccessory = function (log, identifier, accessoryName, pumpData, platform) {
