@@ -408,7 +408,7 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Switch, accessoryName);
 //    accessory.addService(Service.TemperatureSensor, accessoryName + " Temp");
-    accessory.addService(Service.Thermostat, accessoryName + " Heater");
+    accessory.addService(Service.Thermostat);
 
 
     this.accessories[uuid] = new bodyAccessory(log, accessory, bodyData, Homebridge, platform);
