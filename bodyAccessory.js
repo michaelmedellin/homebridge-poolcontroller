@@ -31,13 +31,14 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
       .on('get', this.getCircuitState.bind(this));
    }
 
-  this.service = accessory.getService(Service.TemperatureSensor);
+  /*
+   this.service = accessory.getService(Service.TemperatureSensor);
   if (this.service) {
     this.service  
       .getCharacteristic(Characteristic.CurrentTemperature)
       .on('get', this.getCurrentTemp.bind(this));
     }
-
+*/
     this.service = accessory.getService(Service.Thermostat);
     if (this.service) {
       this.service
@@ -143,8 +144,8 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
     this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On)
       .updateValue(this.bodyData.isOn); 
 
-    this.accessory.getService(Service.TemperatureSensor).getCharacteristic(Characteristic.CurrentTemperature)
-      .updateValue(utils.F2C(this.bodyData.temp))
+//    this.accessory.getService(Service.TemperatureSensor).getCharacteristic(Characteristic.CurrentTemperature)
+//      .updateValue(utils.F2C(this.bodyData.temp))
 
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(utils.F2C(this.bodyData.temp))
@@ -158,11 +159,19 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
 
+      this.loggingService.addEntry({time: moment().unix(), status: this.bodyData.isOn});
+
+      var interval = 5 * 60 * 1000
+      clearTimeout(this.bodyStateTimer)
+      this.bodyStateTimer = setInterval(function(platform, loggingService, state) {
+          loggingService.addEntry({time: moment().unix(), status: state})
+      }, interval, this.platform, this.loggingService, this.bodyData.isOn)
+
       this.loggingService.addEntry({time: moment().unix(), temp: utils.F2C(this.bodyData.temp)});
 
       var interval = 5 * 60 * 1000
-      clearTimeout(this.tempUpdateTimer)
-      this.tempUpdateTimer = setInterval(function(platform, loggingService, tempData) {
+      clearTimeout(this.bodyTempTimer)
+      this.bodyTempTimer = setInterval(function(platform, loggingService, tempData) {
           loggingService.addEntry({time: moment().unix(), temp: utils.F2C(tempData)})
       }, interval, this.platform, this.loggingService, this.bodyData.temp)
 

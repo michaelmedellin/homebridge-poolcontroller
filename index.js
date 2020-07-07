@@ -407,14 +407,14 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Switch, accessoryName);
-    accessory.addService(Service.TemperatureSensor, accessoryName + " Temp");
+//    accessory.addService(Service.TemperatureSensor, accessoryName + " Temp");
     accessory.addService(Service.Thermostat, accessoryName + " Heater");
 
 
     this.accessories[uuid] = new bodyAccessory(log, accessory, bodyData, Homebridge, platform);
     this.api.registerPlatformAccessories("homebridge-PoolControllerPlatform", "PoolControllerPlatform", [accessory]);
 
-    accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
+//    accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
     accessory.getService(Service.Thermostat).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
     accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
         .setProps({
@@ -428,6 +428,8 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
           maxValue: Characteristic.TargetHeatingCoolingState.HEAT
         })
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.SerialNumber, uuid);
+
 };
 PoolControllerPlatform.prototype.addTempAccessory = function (log, identifier, accessoryName, tempData, platform) {
     var customtypes = require('./customTypes.js')
