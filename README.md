@@ -16,7 +16,11 @@ Requires PoolController (next branch): https://github.com/tagyoureit/nodejs-pool
 Config options and explanation:
 
 `ip_address`: Set to "*" to use SSDP auto-discovery or specify full path to nodejs-poolController (e.g. `http://ip_address:4200`)
+
 `secure`: Use secure connection to server
+
 `skipAllUnInit`: If `true`, plugin will skip any uninitialized circuit (names starting with "AUX" or "Feature")
+
 `skipCircuitNames`: List of circuits to skip (specify circuit names) 
+
 `debug`: Enable pluging debug reporting (in Homebridge log) 
