@@ -18,9 +18,8 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
   var customtypes = require('./customTypes.js')
   var CustomTypes = new customtypes(Homebridge)
   var FakeGatoHistoryService = require('fakegato-history')(homebridge);
-  this.loggingService = new FakeGatoHistoryService("weather", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
-  this.SWloggingService = new FakeGatoHistoryService("switch", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
-
+  this.loggingService = new FakeGatoHistoryService("thermo", this.accessory, {size:11520,disableTimer:true,storage:'fs'});
+  
   this.bodyData = bodyData
   this.platform = platform
 
@@ -160,20 +159,13 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
 
-      this.SWloggingService.addEntry({time: moment().unix(), status: this.bodyData.isOn});
-      var interval = 5 * 60 * 1000
-      clearTimeout(this.bodyStateTimer)
-      this.bodyStateTimer = setInterval(function(platform, SWloggingService, state) {
-        platform.log('setting body state on fake_gato ', state ? 1 : 0)  
-        SWloggingService.addEntry({time: moment().unix(), status: state? 1 : 0})
-      }, interval, this.platform, this.SWloggingService, this.bodyData.isOn)
-
-      this.loggingService.addEntry({time: moment().unix(), temp: utils.F2C(this.bodyData.temp)});
-      var interval = 5 * 60 * 1000
+      this.loggingService.addEntry({time: moment().unix(), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus});
+      var interval = 8 * 60 * 1000
       clearTimeout(this.bodyTempTimer)
-      this.bodyTempTimer = setInterval(function(platform, loggingService, tempData) {
-          loggingService.addEntry({time: moment().unix(), temp: utils.F2C(tempData)})
-      }, interval, this.platform, this.loggingService, this.bodyData.temp)
+      this.bodyTempTimer = setInterval(function(platform, loggingService, tempData, setPoint, heatState) {
+          platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatMode * 100)
+          loggingService.addEntry({time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState})
+      }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus)
 
   return
 }

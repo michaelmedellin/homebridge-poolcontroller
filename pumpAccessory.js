@@ -28,11 +28,13 @@ var PoolPumpAccessory = function(log, accessory, pumpData, homebridge, platform)
   if (this.service) {
     this.service
       .getCharacteristic(Characteristic.On)
-      .on('get', this.getPumpState.bind(this));
+      .on('get', this.getPumpState.bind(this))
+      .on('set', this.setPumpState.bind(this));
 
       this.service
       .getCharacteristic(Characteristic.RotationSpeed)
       .on('get', this.getPumpSpeed.bind(this))
+      .on('set', this.setPumpState.bind(this));
 
       this.service
       .getCharacteristic(CustomTypes.CurrentPowerConsumption)
@@ -59,11 +61,21 @@ PoolPumpAccessory.prototype.getPumpState = function(callback) {
   callback(null, this.pumpData.rpm > 0 ? true : false);
 };
 
+PoolPumpAccessory.prototype.setPumpState = function(newValue, callback) {
+  this.log('Set pump state called')
+  callback();
+};
+
 PoolPumpAccessory.prototype.getPumpSpeed = function(callback) {
   callback(null, this.pumpData.rpm/this.pumpData.type.maxSpeed*100);
 };
 
-PoolPumpAccessory.prototype.getPumpRPM = function(callback) {
+PoolPumpAccessory.prototype.setPumpSpeed = function(newValue, callback) {
+  // do nothing
+    callback();
+  };
+  
+  PoolPumpAccessory.prototype.getPumpRPM = function(callback) {
   callback(null, this.pumpData.rpm);
 };
 

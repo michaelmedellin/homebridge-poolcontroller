@@ -59,7 +59,7 @@ PoolTempAccessory.prototype.updateState = function(newtempData) {
 
       this.loggingService.addEntry({time: moment().unix(), temp: utils.F2C(this.tempData)});
 
-      var interval = 5 * 60 * 1000
+      var interval = 10 * 60 * 1000
       clearTimeout(this.tempUpdateTimer)
       this.tempUpdateTimer = setInterval(function(platform, loggingService, tempData) {
           loggingService.addEntry({time: moment().unix(), temp: utils.F2C(tempData)})

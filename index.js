@@ -461,6 +461,7 @@ PoolControllerPlatform.prototype.addPumpAccessory = function (log, identifier, a
     accessory.getService(Service.Fan).addCharacteristic(CustomTypes.ResetTotal)
     accessory.getService(Service.Fan).addCharacteristic(CustomTypes.PumpGPM)
     accessory.getService(Service.Fan).addCharacteristic(CustomTypes.PumpRPM)
+
     accessory.getService(Service.Fan).getCharacteristic(Characteristic.On)
     .setProps({
         perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
