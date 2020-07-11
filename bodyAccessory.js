@@ -159,13 +159,13 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
       this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
 
-      this.loggingService.addEntry({time: moment().unix(), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus});
+      this.loggingService.addEntry({time: moment().unix(), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus.val});
       var interval = 8 * 60 * 1000
       clearTimeout(this.bodyTempTimer)
       this.bodyTempTimer = setInterval(function(platform, loggingService, tempData, setPoint, heatState) {
           platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatMode * 100)
           loggingService.addEntry({time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState})
-      }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus)
+      }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
 
   return
 }
