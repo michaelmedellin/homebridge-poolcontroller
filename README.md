@@ -1,37 +1,22 @@
-# homebridge-poolcontroller for [4.x-DEV branch](https://github.com/tagyoureit/nodejs-poolController/tree/4.x-DEV)
+# homebridge-poolcontroller for [next branch](https://github.com/tagyoureit/nodejs-poolController/tree/next)
 
 PoolController plugin for homebridge: https://github.com/nfarina/homebridge
 
 
-##This version differs from the first by:
-1. Accessory will auto discover IP of nodejs-poolController (but you can still hard code the IP)
-1. Lights are now displayed as lights, circuits remain as switches.
-1. Heaters in HomeKit will no longer turn on/off the circuits they are associated with.
-1. Heater modes map as follows: Off=Off; Heat=Heater; Cool=Solar Preferred; Auto=Solar
-1. Heat modes will be "active" when the circuit is on and set to a mode other than Off.
-1. Being that mappings aren't ideal, Cool and Auto may show as blue (cooling) when they are not, but heater will show as heating when the current temp is below the target temp.
+##This plugin is forked from the original plugin published by @leftyfl1p at https://github.com/leftyfl1p/homebridge-poolcontroller
 
-Requires PoolController: https://github.com/tagyoureit/nodejs-poolController
+Key Changes
+1. Compatible with the new API in `next` branch of `nodejs-poolController`
+2. Support for displaying history (e.g temps, pump power consumption, etc) in the [EVE](https://apps.apple.com/us/app/eve-for-homekit/id917695792) app 
+3. Support for setting configuration options in the homebridge UI
+4. Ability to skip circuits (auxiliary and feature circuits) that are not used on the outdoor panel (either in bulk or by specific circuit names)
 
-Example config using SSDP/UPnP:
+Requires PoolController (next branch): https://github.com/tagyoureit/nodejs-poolController
 
-    "platforms": [
-         {
-          "platform": "PoolControllerPlatform",
-          "name": "Pool Controller",
-          "ip_address": "*",
-          "secure": "false"
-        }
-    ]
+Config options and explanation:
 
-
-Example config using static IP:
-
-    "platforms": [
-         {
-          "platform": "PoolControllerPlatform",
-          "name": "Pool Controller",
-          "ip_address": "http://localhost:3000",
-          "secure": "false"
-        }
-    ]
+`ip_address`: Set to "*" to use SSDP auto-discovery or specify full path to nodejs-poolController (e.g. `http://ip_address:4200`)
+`secure`: Use secure connection to server
+`skipAllUnInit`: If `true`, plugin will skip any uninitialized circuit (names starting with "AUX" or "Feature")
+`skipCircuitNames`: List of circuits to skip (specify circuit names) 
+`debug`: Enable pluging debug reporting (in Homebridge log) 
