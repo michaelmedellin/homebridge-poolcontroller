@@ -9,7 +9,7 @@ Key Changes
 1. Compatible with the new API in `next` branch of `nodejs-poolController`
 2. Support for displaying history (e.g temps, pump power consumption, etc) in the [EVE](https://apps.apple.com/us/app/eve-for-homekit/id917695792) app 
 3. Support for setting configuration options in the homebridge UI
-4. Ability to skip circuits (auxiliary and feature circuits) that are not used on the outdoor panel (either in bulk or by specific circuit names)
+4. Ability to skip circuits (auxiliary and feature circuits) that are not used on the outdoor panel (either in bulk or by specific circuit names - thanks [@emes](https://github.com/gadget-monk/homebridge-poolcontroller/pull/1))
 
 Requires PoolController (next branch): https://github.com/tagyoureit/nodejs-poolController
 
