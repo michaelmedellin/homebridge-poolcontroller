@@ -57,7 +57,7 @@ PoolControllerAccessory.prototype.updateState = function(newcontrollerData) {
   var CustomTypes = new customtypes(Homebridge)
 
   this.controllerData = newcontrollerData;
-
+if (this.controllerData.delay.val==undefined) {this.controllerData.delay.val=32}
     this.accessory.getService(Service.ContactSensor).getCharacteristic(Characteristic.ContactSensorState).updateValue(this.controllerData.delay.val == 32 ? Characteristic.ContactSensorState.CONTACT_DETECTED : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED); 
     this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.controllerMode).updateValue(this.controllerData.mode.desc); 
     this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.delayReason).updateValue(this.controllerData.delay.desc); 
