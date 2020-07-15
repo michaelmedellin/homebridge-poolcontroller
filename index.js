@@ -284,7 +284,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         }
     }
     // add temp accessories
-    if (tempData.air != undefined) {
+    if (tempData.air !== undefined) {
         var id = "poolController.A.AirTemp";
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
@@ -298,7 +298,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     }
 
 
-    if (tempData.waterSensor1 != undefined) {
+    if (tempData.waterSensor1 !== undefined) {
         var id = "poolController.B.WaterTemp";
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
@@ -331,7 +331,7 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
         }
     }
 
-    if (tempData.air != undefined) {
+    if (tempData.air !== undefined) {
         var id = "poolController.A.AirTemp";
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
@@ -340,7 +340,7 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
         }
     }
 
-    if (tempData.waterSensor1 != undefined) {
+    if (tempData.waterSensor1 !== undefined) {
         var id = "poolController.B.WaterTemp";
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];

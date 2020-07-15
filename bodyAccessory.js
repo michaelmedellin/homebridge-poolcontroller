@@ -103,7 +103,7 @@ PoolBodyAccessory.prototype.getThermoTargetTemp = function(callback) {
 PoolBodyAccessory.prototype.setThermoTargetTemp = function(newSetPoint, callback) {
   if (this.bodyData.setPoint !== utils.C2F(newSetPoint)) {
 
-    this.log("Setting Body Setpoint", this.accessory.displayName, "to", Math.round(utils.C2F(newSetPoint)));
+    if (this.debug) this.log("Setting Body Setpoint", this.accessory.displayName, "to", Math.round(utils.C2F(newSetPoint)));
 
     this.platform.execute("setHeatSetPoint", {id: this.bodyData.id, setPoint: Math.round(utils.C2F(newSetPoint))})
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(utils.F2C(Math.round(utils.F2C(newSetPoint))));
@@ -123,7 +123,7 @@ PoolBodyAccessory.prototype.getThermoTargetState = function(callback) {
 
 PoolBodyAccessory.prototype.setThermoTargetState = function(newTargetState, callback) {
 
-    this.log("Setting Body Target State", this.accessory.displayName, "to", newTargetState);
+  if (this.debug) this.log("Setting Body Target State", this.accessory.displayName, "to", newTargetState);
 
     this.platform.execute("setHeatMode", {id: this.bodyData.id, mode: utils.HK_Mode(newTargetState, Characteristic)})
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newTargetState);
@@ -163,7 +163,7 @@ PoolBodyAccessory.prototype.updateState = function(newbodyData) {
       var interval = 8 * 60 * 1000
       clearTimeout(this.bodyTempTimer)
       this.bodyTempTimer = setInterval(function(platform, loggingService, tempData, setPoint, heatState) {
-          platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatMode * 100)
+        if (this.debug) platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatState * 100)
           loggingService.addEntry({time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState})
       }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
 
