@@ -275,7 +275,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     controllerData = {}
     controllerData.delay = data.delay
     controllerData.mode = data.mode
-    if (controllerAccessory.delay != undefined || controllerAccessory.mode != undefined) {
+    if (data.delay !== undefined || data.mode !== undefined) {
         if (cachedAccessory === undefined)
             this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
         else {
@@ -354,7 +354,7 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
 
 PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerData) {
     if (this.debug) this.log('FROM CONTROLLER CLIENT: ' + JSON.stringify(controllerData, null, "\t"));
-    if (controllerData.delay != undefined || controllerData.mode != undefined) {
+    if (controllerData.delay !== undefined || controllerData.mode !== undefined) {
 
         var id = "poolController.0.Controller";
         var uuid = UUIDGen.generate(id);
