@@ -1,10 +1,21 @@
 {
   "name": "homebridge-poolcontroller",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "PoolController plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "Pentair",
+    "pool",
+    "EasyTouch",
+    "IntelliTouch",
+    "IntelliFlo",
+    "Controller",
+    "home automation",
+    "heat",
+    "temperature",
+    "pump",
+    "chlorinator"
   ],
   "repository": {
     "type": "git",
