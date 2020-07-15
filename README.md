@@ -24,3 +24,7 @@ Config options and explanation:
 `skipCircuitNames`: List of circuits to skip (specify circuit names) 
 
 `debug`: Enable pluging debug reporting (in Homebridge log) 
+
+`setupBodyAsCircuit`: If set to true, water bodies (such as Pool and Spa) will be setup as auxiliary circuits (only on/off functionality and no thermostat/heater state control functions). This is useful for virtual controller setups
+
+`IgnoreControllerReadyState`: Normally the plugin waits for poolController to report "Ready" status, setting this to true disables this check. Not Recommended for normal use. 

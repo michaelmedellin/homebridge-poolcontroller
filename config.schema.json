@@ -39,6 +39,18 @@
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "setupBodyAsCircuit": {
+        "title": "Setup water bodies (e.g. pool, spa) as normal circuits (on/off functionality only, useful for virtual controllers)?",
+        "type": "boolean",
+        "required": false,
+        "default": false
+      },
+      "IgnoreControllerReadyState": {
+        "title": "Ignore checks to ensure pool controller status is Ready prior to initilization?",
+        "type": "boolean",
+        "required": false,
+        "default": false
       }
     }
   },

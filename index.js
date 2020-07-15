@@ -40,6 +40,9 @@ function PoolControllerPlatform(log, config, api) {
     if (self.skipAllUnInit == undefined) self.skipAllUnInit = true;
     if (self.debug == undefined) self.debug = false;
 
+    if (self.config.setupBodyAsCircuit == undefined) self.config.setupBodyAsCircuit = false
+    if (self.config.IgnoreControllerReadyState == undefined) self.config.IgnoreControllerReadyState = false
+
     //check config here.
     //check pool controller version
 
@@ -102,14 +105,21 @@ PoolControllerPlatform.prototype.validateVersion = async function (URL) {
             self.log("Version checked OK, getting config data");
 
             data = await self.execute("getAll")
-            if (data.status.val == 1) {
-                self.log('Pool controller reports it is ready, getting initial data')
+            if (self.config.IgnoreControllerReadyState) {
+                self.log("Ignoring controller ready state. Controller state is: %s (%s)", data.status.name, data.status.val)
                 controllerNotReady = false;
+
             }
             else {
-                self.log('Pool controller not ready, retrying...')
-                await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 sec
+                if (data.status.val == 1) {
+                    self.log('Pool controller reports it is ready, getting initial data')
+                    controllerNotReady = false;
+                }
+                else {
+                    self.log('Pool controller not ready, retrying...')
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 sec
 
+                }
             }
         }
 
@@ -149,8 +159,15 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     for (var i in circuitData) {
         addCircuit = true
 
-        if (circuitData[i].name == "NOT USED" || circuitData[i].type.name.toLowerCase() == "spa" || circuitData[i].type.name.toLowerCase() == "pool") {
+        if (circuitData[i].name == "NOT USED") {
             addCircuit = false
+        }
+
+        if (circuitData[i].type.name.toLowerCase() == "spa" || circuitData[i].type.name.toLowerCase() == "pool") {
+            if (this.config.setupBodyAsCircuit)
+                this.log('setupBodyAsCircuit is true, setting up %s as circuit and NOT body accessory', circuitData[i].name)
+            else addCircuit = false
+
         }
 
         if (this.skipAllUnInit && circuitData[i].name.substr(0, 3) == "AUX") {
@@ -199,36 +216,36 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             }
         }
     }
+    if (this.config.setupBodyAsCircuit == false) {
+        for (var i in bodyData) {
 
-    for (var i in bodyData) {
+            var bodyNumber = bodyData[i].circuit
+            var bodyName = bodyData[i].name
+            var bodyID = bodyData[i].id
+            var id = "poolController." + bodyNumber + "." + bodyID + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
+            var uuid = UUIDGen.generate(id);
+            var cachedAccessory = this.accessories[uuid];
+            this.log('Processing Body - ', id)
+            this.log('Body UUID ', uuid)
 
-        var bodyNumber = bodyData[i].circuit
-        var bodyName = bodyData[i].name
-        var bodyID = bodyData[i].id
-        var id = "poolController." + bodyNumber + "." + bodyID + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
-        var uuid = UUIDGen.generate(id);
-        var cachedAccessory = this.accessories[uuid];
-        this.log('Processing Body - ', id)
-        this.log('Body UUID ', uuid)
+            if (cachedAccessory === undefined) {
+                if (this.debug) this.log('Adding new body: %s', bodyName)
 
-        if (cachedAccessory === undefined) {
-            if (this.debug) this.log('Adding new body: %s', bodyName)
-
-            this.addBodyAccessory(this.log, id, bodyName, bodyData[i], this);
-        } else {
-            if (this.debug) {
-                this.log('Using cached body: %s', bodyName)
-                this.log('---Diagnostic data on cached accessory--- ')
-                this.log('Cached Accessory UUID: ', cachedAccessory.UUID)
-                this.log('Cached Accessory name ', cachedAccessory.displayName)
-                this.log('Constructor ', cachedAccessory.constructor.name)
-                this.log('---End Diagnostic Data---')
+                this.addBodyAccessory(this.log, id, bodyName, bodyData[i], this);
+            } else {
+                if (this.debug) {
+                    this.log('Using cached body: %s', bodyName)
+                    this.log('---Diagnostic data on cached accessory--- ')
+                    this.log('Cached Accessory UUID: ', cachedAccessory.UUID)
+                    this.log('Cached Accessory name ', cachedAccessory.displayName)
+                    this.log('Constructor ', cachedAccessory.constructor.name)
+                    this.log('---End Diagnostic Data---')
+                }
+                this.accessories[uuid] = new bodyAccessory(this.log, cachedAccessory, bodyData[i], Homebridge, this)
             }
-            this.accessories[uuid] = new bodyAccessory(this.log, cachedAccessory, bodyData[i], Homebridge, this)
+
         }
-
     }
-
     // add pumps
     for (var i in pumpData) {
 
@@ -262,37 +279,41 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     if (cachedAccessory === undefined)
         this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
     else {
-        if (debug) this.log('Adding cached controller: %s', data.equipment.model)
+        if (this.debug) this.log('Adding cached controller: %s', data.equipment.model)
         this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData, Homebridge, this)
     }
 
     // add temp accessories
-    var id = "poolController.A.AirTemp";
-    var uuid = UUIDGen.generate(id);
-    var cachedAccessory = this.accessories[uuid];
+    if (tempData.air != undefined) {
+        var id = "poolController.A.AirTemp";
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
 
-    if (cachedAccessory === undefined)
-        this.addTempAccessory(this.log, id, "Air Temperature", tempData.air, this);
-    else {
-        if (debug) this.log('Adding cached temp sensor: Air Temperature')
-        this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.air, Homebridge, this)
+        if (cachedAccessory === undefined)
+            this.addTempAccessory(this.log, id, "Air Temperature", tempData.air, this);
+        else {
+            if (this.debug) this.log('Adding cached temp sensor: Air Temperature')
+            this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.air, Homebridge, this)
+        }
     }
 
-    var id = "poolController.B.WaterTemp";
-    var uuid = UUIDGen.generate(id);
-    var cachedAccessory = this.accessories[uuid];
 
-    if (cachedAccessory === undefined)
-        this.addTempAccessory(this.log, id, "Water Sensor", tempData.waterSensor1, this);
-    else {
-        if (debug) this.log('Adding cached sensor: Water Temperature')
-        this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.waterSensor1, Homebridge, this)
+    if (tempData.waterSensor1 != undefined) {
+        var id = "poolController.B.WaterTemp";
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
+
+        if (cachedAccessory === undefined)
+            this.addTempAccessory(this.log, id, "Water Sensor", tempData.waterSensor1, this);
+        else {
+            if (this.debug) this.log('Adding cached sensor: Water Temperature')
+            this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.waterSensor1, Homebridge, this)
+        }
     }
-
 
     socket.on('circuit', this.socketCircuitUpdated.bind(this));
     socket.on('feature', this.socketCircuitUpdated.bind(this));
-    socket.on('body', this.socketbodyUpdated.bind(this));
+    if (this.config.setupBodyAsCircuit == false) socket.on('body', this.socketbodyUpdated.bind(this));
     socket.on('temps', this.socketTempsUpdated.bind(this));
     socket.on('controller', this.socketControllerUpdated.bind(this));
     socket.on('pump', this.socketPumpUpdated.bind(this));
@@ -303,25 +324,30 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
     if (this.debug) this.log('FROM TEMP CLIENT: ' + JSON.stringify(tempData, null, "\t"));
     allbodyData = tempData.bodies
 
-    for (var i in allbodyData) {
-        if (this.debug) this.log('Updating temp (and all other) data for body: ', allbodyData[i].name)
-        this.socketbodyUpdated(allbodyData[i])
+    if (this.config.setupBodyAsCircuit == false) {
+        for (var i in allbodyData) {
+            if (this.debug) this.log('Updating temp (and all other) data for body: ', allbodyData[i].name)
+            this.socketbodyUpdated(allbodyData[i])
+        }
     }
 
-    var id = "poolController.A.AirTemp";
-    var uuid = UUIDGen.generate(id);
-    var cachedAccessory = this.accessories[uuid];
-    if (cachedAccessory !== undefined) {
-        cachedAccessory.updateState(tempData.air)
+    if (tempData.air != undefined) {
+        var id = "poolController.A.AirTemp";
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
+        if (cachedAccessory !== undefined) {
+            cachedAccessory.updateState(tempData.air)
+        }
     }
 
-    var id = "poolController.B.WaterTemp";
-    var uuid = UUIDGen.generate(id);
-    var cachedAccessory = this.accessories[uuid];
-    if (cachedAccessory !== undefined) {
-        cachedAccessory.updateState(tempData.waterSensor1)
+    if (tempData.waterSensor1 != undefined) {
+        var id = "poolController.B.WaterTemp";
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
+        if (cachedAccessory !== undefined) {
+            cachedAccessory.updateState(tempData.waterSensor1)
+        }
     }
-
 
 };
 
@@ -359,7 +385,11 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
     var circuitState = circuitData.isOn;
     var updateCircuit = true
 
-    if (circuitName == "NOT USED" || circuitFunction == "spa" || circuitFunction == "pool") {
+    if (circuitName == "NOT USED") {
+        updateCircuit = false
+    }
+
+    if ((this.config.setupBodyAsCircuit == false) && (circuitFunction == "spa" || circuitFunction == "pool")) {
         updateCircuit = false
     }
 
