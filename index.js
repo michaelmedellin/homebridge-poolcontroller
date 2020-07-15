@@ -275,14 +275,14 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     controllerData = {}
     controllerData.delay = data.delay
     controllerData.mode = data.mode
-
-    if (cachedAccessory === undefined)
-        this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
-    else {
-        if (this.debug) this.log('Adding cached controller: %s', data.equipment.model)
-        this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData, Homebridge, this)
+    if (controllerAccessory.delay != undefined || controllerAccessory.mode != undefined) {
+        if (cachedAccessory === undefined)
+            this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
+        else {
+            if (this.debug) this.log('Adding cached controller: %s', data.equipment.model)
+            this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData, Homebridge, this)
+        }
     }
-
     // add temp accessories
     if (tempData.air != undefined) {
         var id = "poolController.A.AirTemp";
@@ -354,13 +354,15 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
 
 PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerData) {
     if (this.debug) this.log('FROM CONTROLLER CLIENT: ' + JSON.stringify(controllerData, null, "\t"));
-    var id = "poolController.0.Controller";
-    var uuid = UUIDGen.generate(id);
-    var cachedAccessory = this.accessories[uuid];
-    if (cachedAccessory !== undefined) {
-        cachedAccessory.updateState(controllerData)
-    }
+    if (controllerData.delay != undefined || controllerData.mode != undefined) {
 
+        var id = "poolController.0.Controller";
+        var uuid = UUIDGen.generate(id);
+        var cachedAccessory = this.accessories[uuid];
+        if (cachedAccessory !== undefined) {
+            cachedAccessory.updateState(controllerData)
+        }
+    }
 
 };
 
