@@ -67,11 +67,11 @@ var PoolBodyAccessory = function(log, accessory, bodyData, homebridge, platform)
   // accessory.updateReachability(true);
 }
 
-PoolBodyAccessory.prototype.setCircuitState = function(newCircuitState, callback) {
+PoolBodyAccessory.prototype.setCircuitState = async function(newCircuitState, callback) {
   if (this.bodyData.isOn !== newCircuitState) {
 
     if (this.debug) this.log("Setting Body", this.accessory.displayName, "to", newCircuitState);
-    this.platform.execute("toggleCircuit", {id: this.bodyData.circuit})
+    await this.platform.execute("toggleCircuit", {id: this.bodyData.circuit})
     this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On).updateValue(newCircuitState);
 
   }
@@ -121,11 +121,11 @@ PoolBodyAccessory.prototype.getThermoTargetState = function(callback) {
   callback(null, utils.HeatingMode(this.bodyData.heatMode, Characteristic));  
 };
 
-PoolBodyAccessory.prototype.setThermoTargetState = function(newTargetState, callback) {
+PoolBodyAccessory.prototype.setThermoTargetState = async function(newTargetState, callback) {
 
   if (this.debug) this.log("Setting Body Target State", this.accessory.displayName, "to", newTargetState);
 
-    this.platform.execute("setHeatMode", {id: this.bodyData.id, mode: utils.HK_Mode(newTargetState, Characteristic)})
+    await this.platform.execute("setHeatMode", {id: this.bodyData.id, mode: utils.HK_Mode(newTargetState, Characteristic)})
     this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newTargetState);
 
   callback();

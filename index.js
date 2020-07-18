@@ -123,21 +123,6 @@ PoolControllerPlatform.prototype.validateVersion = async function (URL) {
             }
         }
 
-        socket = io.connect(self.config.ip_address, {
-            secure: self.config.secure,
-            reconnect: true,
-            rejectUnauthorized: false
-        });
-        socket.on('connection', function () {
-            self.log('homebridge-poolcontroller connected to the server')
-        })
-        socket.on('connect_error', function () {
-            self.log('ERROR: homebridge-poolcontroller can NOT find the pool controller')
-        })
-        socket.on('error', function (data) {
-            console.log('Socket error:', data)
-        });
-
         self.InitialData(data);
     }
     else {
@@ -148,6 +133,7 @@ PoolControllerPlatform.prototype.validateVersion = async function (URL) {
 
 PoolControllerPlatform.prototype.InitialData = function (data) {
     //    this.log("Got config packet")
+    var self = this;
     if (this.debug) this.log("InitialData: ", data);
     var circuitData = data.circuits.concat(data.features)
     var addCircuit = true
@@ -283,6 +269,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData, Homebridge, this)
         }
     }
+
     // add temp accessories
     if (tempData.air !== undefined) {
         var id = "poolController.A.AirTemp";
@@ -311,13 +298,33 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         }
     }
 
+    //    socket = io(self.config.ip_address, {
+    //        secure: self.config.secure,
+    //        reconnect: true,
+    //        rejectUnauthorized: false
+    //    });
+
+    socket = io(self.config.ip_address);
+
+    socket.on('connect', function () {
+        self.log('homebridge-poolcontroller connected to the server')
+        self.log("Socket connection status: ", socket.connected)
+
+    })
+
+    socket.on('connect_error', function () {
+        self.log('ERROR: homebridge-poolcontroller can NOT find the pool controller')
+    })
+    socket.on('error', function (data) {
+        console.log('Socket error:', data)
+    });
+
     socket.on('circuit', this.socketCircuitUpdated.bind(this));
     socket.on('feature', this.socketCircuitUpdated.bind(this));
     if (this.config.setupBodyAsCircuit == false) socket.on('body', this.socketbodyUpdated.bind(this));
     socket.on('temps', this.socketTempsUpdated.bind(this));
     socket.on('controller', this.socketControllerUpdated.bind(this));
     socket.on('pump', this.socketPumpUpdated.bind(this));
-
 };
 
 PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
@@ -565,7 +572,7 @@ PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, 
 PoolControllerPlatform.prototype.execute = async function (action, data) {
     const axios = require('axios').default;
     var poolURL = this.config.ip_address
-    if (this.debug) { this.log("Executing request - server: %s, command: %s, data:", poolURL, action, data) }
+    //if (this.debug) { this.log("Executing request - server: %s, command: %s, data:", poolURL, action, data) }
 
     let opts = {
         method: 'put',

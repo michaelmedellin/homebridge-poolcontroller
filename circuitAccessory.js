@@ -26,11 +26,11 @@ this.updateState(circuitState)
   // accessory.updateReachability(true);
 }
 
-PoolCircuitAccessory.prototype.setCircuitState = function(circuitState, callback) {
+PoolCircuitAccessory.prototype.setCircuitState = async function(circuitState, callback) {
   if (this.debug) this.log("Setting Circuit", this.accessory.displayName, "to", circuitState, " from ", this.circuitState);
 
   if (this.circuitState !== circuitState) {
-    this.platform.execute("toggleCircuit", {id: this.circuit})
+    await this.platform.execute("toggleCircuit", {id: this.circuit})
 
     //    this.socket.emit("toggleCircuit", this.circuit);
     //this.updateCircuitState(circuitState);
