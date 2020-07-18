@@ -261,7 +261,14 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     controllerData = {}
     controllerData.delay = data.delay
     controllerData.mode = data.mode
-    if (data.delay !== undefined || data.mode !== undefined) {
+    this.log('Variable check - data.delay == undefined: ', (data.delay == undefined))
+    this.log('Variable check - data.mode == undefined: ', (data.mode == undefined))
+
+    if (data.delay == undefined || data.mode == undefined) {
+        this.log('Delay or mode not found, skipping controller accessory')
+    }
+    else {
+        this.log('Controller Delay and mode variables found, creating controller accessory')
         if (cachedAccessory === undefined)
             this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
         else {
@@ -303,7 +310,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     //        reconnect: true,
     //        rejectUnauthorized: false
     //    });
-
+    this.log('Starting socket connection...')
     socket = io(self.config.ip_address);
 
     socket.on('connect', function () {
