@@ -34,11 +34,37 @@
           "type": "string"
         }
       },
-      "debug": {
-        "title": "Activate debug logging?",
-        "type": "boolean",
-        "required": false,
-        "default": false
+      "LogLevel": {
+        "title": "Set log level for plugin",
+        "type": "string",
+        "required": true,
+        "default": "normal",
+        "oneOf": [
+          {
+            "title": "Debug (log everything)",
+            "enum": [
+              "debug"
+            ]
+          },
+          {
+            "title": "Normal (log state changes in addition to errors/warnings",
+            "enum": [
+              "normal"
+            ]
+          },
+          {
+            "title": "Errors (log errors/warnings only, e.g. disconnect from server)",
+            "enum": [
+              "warn"
+            ]
+          },
+          {
+            "title": "None (supress all logging)",
+            "enum": [
+              "none"
+            ]
+          }
+        ]
       },
       "setupBodyAsCircuit": {
         "title": "Setup water bodies (e.g. pool, spa) as normal circuits (on/off functionality only, useful for virtual controllers)?",

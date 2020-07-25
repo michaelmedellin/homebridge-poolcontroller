@@ -55,7 +55,7 @@ PoolControllerAccessory.prototype.getDelayReason = function(callback) {
 PoolControllerAccessory.prototype.updateState = function(newcontrollerData) {
   var customtypes = require('./customTypes.js')
   var CustomTypes = new customtypes(Homebridge)
-
+  
   this.controllerData = newcontrollerData;
     this.accessory.getService(Service.ContactSensor).getCharacteristic(Characteristic.ContactSensorState).updateValue(this.controllerData.delay.val == 32 ? Characteristic.ContactSensorState.CONTACT_DETECTED : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED); 
     this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.controllerMode).updateValue(this.controllerData.mode.desc); 

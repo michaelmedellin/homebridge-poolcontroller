@@ -35,10 +35,39 @@ function PoolControllerPlatform(log, config, api) {
     self.accessories = {};
     self.skipAllUnInit = self.config.skipAllUnInit;
     self.skipCircuitNames = self.config.skipCircuitNames || [];
-    self.debug = self.config.debug
+
+    if (this.config.LogLevel == undefined) { this.LogLevel = 3 }
+    else {
+        switch (this.config.LogLevel) {
+            case "debug":
+                this.LogLevel = 4
+                break;
+
+            case "normal":
+                this.LogLevel = 3
+                break;
+
+            case "warn":
+                this.LogLevel = 2
+                break;
+
+            case "none":
+                this.LogLevel = 1
+                break;
+
+            default:
+                this.LogLevel = 3
+
+        }
+    }
+
+    if (this.config.debug != undefined) {
+        if (this.config.debug = true) this.LogLevel = 4
+    }
+
+    if (this.LogLevel == 4) this.debug = true
 
     if (self.skipAllUnInit == undefined) self.skipAllUnInit = true;
-    if (self.debug == undefined) self.debug = false;
 
     if (self.config.setupBodyAsCircuit == undefined) self.config.setupBodyAsCircuit = false
     if (self.config.IgnoreControllerReadyState == undefined) self.config.IgnoreControllerReadyState = false
@@ -57,13 +86,13 @@ PoolControllerPlatform.prototype.SSDPDiscovery = function () {
     var elapsedTime = 0;
     if (self.config.ip_address === '*') {
         var client = new ssdp({})
-        self.log('Starting UPnP search for PoolController.')
+        if (this.LogLevel >= 3) self.log('Starting UPnP search for PoolController.')
 
         client.on('response', function inResponse(headers, code, rinfo) {
             //console.log('Got a response to an m-search:\n%d\n%s\n%s', code, JSON.stringify(headers, null, '  '), JSON.stringify(rinfo, null, '  '))
             if (headers.ST === 'urn:schemas-upnp-org:device:PoolController:1') {
                 self.config.ip_address = headers.LOCATION.replace('/device', '');
-                self.log('Found nodejs-poolController at %s.', self.config.ip_address)
+                if (this.LogLevel >= 3) self.log('Found nodejs-poolController at %s.', self.config.ip_address)
                 client.stop()
                 clearTimeout(timer)
                 self.validateVersion(headers.LOCATION)
@@ -76,7 +105,7 @@ PoolControllerPlatform.prototype.SSDPDiscovery = function () {
         timer = setInterval(function () {
             elapsedTime += 5;
             client.search('urn:schemas-upnp-org:device:PoolController:1')
-            self.log('Can not find nodejs-PoolController after %s seconds.', elapsedTime)
+            if (this.LogLevel >= 2) self.log('Can not find nodejs-PoolController after %s seconds.', elapsedTime)
         }, 5000)
 
     } else {
@@ -102,21 +131,21 @@ PoolControllerPlatform.prototype.validateVersion = async function (URL) {
         valid = true
     if (valid) {
         while (controllerNotReady) {
-            self.log("Version checked OK, getting config data");
+            if (this.LogLevel >= 4) self.log("Version checked OK, getting config data");
 
             data = await self.execute("getAll")
             if (self.config.IgnoreControllerReadyState) {
-                self.log("Ignoring controller ready state. Controller state is: %s (%s)", data.status.name, data.status.val)
+                if (this.LogLevel >= 3) self.log("Ignoring controller ready state. Controller state is: %s (%s)", data.status.name, data.status.val)
                 controllerNotReady = false;
 
             }
             else {
                 if (data.status.val == 1) {
-                    self.log('Pool controller reports it is ready, getting initial data')
+                    if (this.LogLevel >= 3) self.log('Pool controller reports it is ready, getting initial data')
                     controllerNotReady = false;
                 }
                 else {
-                    self.log('Pool controller not ready, retrying...')
+                    if (this.LogLevel >= 2) self.log('Pool controller not ready, retrying...')
                     await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 sec
 
                 }
@@ -126,22 +155,20 @@ PoolControllerPlatform.prototype.validateVersion = async function (URL) {
         self.InitialData(data);
     }
     else {
-        self.log.error('Version of poolController %s.%s does not meet the minimum for this Homebridge plugin %s.%s', major, minor, validMajor, validMinor)
+        if (this.LogLevel >= 2) self.log.error('Version of poolController %s.%s does not meet the minimum for this Homebridge plugin %s.%s', major, minor, validMajor, validMinor)
         process.exit()
     }
 }
 
 PoolControllerPlatform.prototype.InitialData = function (data) {
-    //    this.log("Got config packet")
     var self = this;
-    if (this.debug) this.log("InitialData: ", data);
+    if (this.LogLevel >= 4) this.log("InitialData: ", data);
     var circuitData = data.circuits.concat(data.features)
     var addCircuit = true
     var bodyData = data.temps.bodies
     var pumpData = data.pumps
     var tempData = data.temps
 
-    //    this.log("Count of circuits", circuitData)
     for (var i in circuitData) {
         addCircuit = true
 
@@ -151,8 +178,9 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
 
         if (circuitData[i].type.name.toLowerCase() == "spa" || circuitData[i].type.name.toLowerCase() == "pool") {
             if (this.config.setupBodyAsCircuit)
-                this.log('setupBodyAsCircuit is true, setting up %s as circuit and NOT body accessory', circuitData[i].name)
-            else addCircuit = false
+                if (this.LogLevel >= 3)
+                    this.log('setupBodyAsCircuit is true, setting up %s as circuit and NOT body accessory', circuitData[i].name)
+                else addCircuit = false
 
         }
 
@@ -174,7 +202,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         var circuitState = circuitData[i].isOn;
 
         if (addCircuit == false)
-            if (this.debug) this.log('Skipping circuit/accessory %s', circuitName)
+            if (this.LogLevel >= 3) this.log('Skipping circuit/accessory %s', circuitName)
         if (addCircuit) {
 
             var id = "poolController." + circuitNumber + "." + circuitName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
@@ -185,18 +213,18 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             // type === light
             if (['intellibrite', 'light', 'sam light', 'sal light', 'color wheel'].indexOf(circuitFunction) >= 0) {
                 if (cachedAccessory === undefined) {
-                    if (this.debug) this.log('Creating new light accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    if (this.LogLevel >= 3) this.log('Creating new light accessory: circuitNumber: %s, id: %s', circuitNumber, id)
                     this.addLightAccessory(this.log, id, circuitName, circuitNumber, circuitState, this);
                 } else {
-                    if (this.debug) this.log('Adding cached light accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    if (this.LogLevel >= 3) this.log('Adding cached light accessory: circuitNumber: %s, id: %s', circuitNumber, id)
                     this.accessories[uuid] = new lightAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, this);
                 }
             } else {
                 if (cachedAccessory === undefined) {
-                    if (this.debug) this.log('Creating new circuit accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    if (this.LogLevel >= 3) this.log('Creating new circuit accessory: circuitNumber: %s, id: %s', circuitNumber, id)
                     this.addCircuitAccessory(this.log, id, circuitName, circuitNumber, circuitState, this);
                 } else {
-                    if (this.debug) this.log('Using cached circuit accessory: circuitNumber: %s, id: %s', circuitNumber, id)
+                    if (this.LogLevel >= 3) this.log('Using cached circuit accessory: circuitNumber: %s, id: %s', circuitNumber, id)
                     this.accessories[uuid] = new circuitAccessory(this.log, cachedAccessory, circuitNumber, circuitState, Homebridge, this);
                 }
             }
@@ -211,22 +239,14 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             var id = "poolController." + bodyNumber + "." + bodyID + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
             var uuid = UUIDGen.generate(id);
             var cachedAccessory = this.accessories[uuid];
-            this.log('Processing Body - ', id)
-            this.log('Body UUID ', uuid)
+            if (this.LogLevel >= 4) this.log('Processing Body - ', id)
+            if (this.LogLevel >= 4) this.log('Body UUID ', uuid)
 
             if (cachedAccessory === undefined) {
-                if (this.debug) this.log('Adding new body: %s', bodyName)
-
+                if (this.LogLevel >= 3) this.log('Adding new body: %s', bodyName)
                 this.addBodyAccessory(this.log, id, bodyName, bodyData[i], this);
             } else {
-                if (this.debug) {
-                    this.log('Using cached body: %s', bodyName)
-                    this.log('---Diagnostic data on cached accessory--- ')
-                    this.log('Cached Accessory UUID: ', cachedAccessory.UUID)
-                    this.log('Cached Accessory name ', cachedAccessory.displayName)
-                    this.log('Constructor ', cachedAccessory.constructor.name)
-                    this.log('---End Diagnostic Data---')
-                }
+                if (this.LogLevel >= 3) this.log('Using cached body accessory: %s', bodyName)
                 this.accessories[uuid] = new bodyAccessory(this.log, cachedAccessory, bodyData[i], Homebridge, this)
             }
 
@@ -243,11 +263,11 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
 
         if (pumpData[i].type.hasAddress == true) {
             if (cachedAccessory === undefined) {
-                if (this.debug) this.log('Adding new pump: %s', pumpName)
+                if (this.LogLevel >= 3) this.log('Adding new pump accessory: %s', pumpName)
 
                 this.addPumpAccessory(this.log, id, pumpName, pumpData[i], this);
             } else {
-                if (this.debug) this.log('Using cached pump: %s', pumpName)
+                if (this.LogLevel >= 3) this.log('Using cached pump accessory: %s', pumpName)
 
                 this.accessories[uuid] = new pumpAccessory(this.log, cachedAccessory, pumpData[i], Homebridge, this)
             }
@@ -261,20 +281,24 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     controllerData = {}
     controllerData.delay = data.delay
     controllerData.mode = data.mode
-    this.log('Variable check - data.delay == undefined: ', (data.delay == undefined))
-    this.log('Variable check - data.mode == undefined: ', (data.mode == undefined))
 
-    if (data.delay == undefined || data.mode == undefined) {
-        this.log('Delay or mode not found, skipping controller accessory')
+    if (data.equipment.controllerType == "easytouch") {
+        if (data.delay == undefined || data.mode == undefined) {
+            if (this.LogLevel >= 3) this.log('Delay or mode not found, skipping controller accessory')
+        }
+        else {
+            if (cachedAccessory === undefined) {
+            if (this.LogLevel >= 3) this.log('Controller Delay and mode variables found, creating controller accessory: %s', data.equipment.model)
+                this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
+            }
+            else {
+                if (this.LogLevel >= 3) this.log('Controller Delay and mode variables found, using cached controller: %s', data.equipment.model)
+                this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData, Homebridge, this)
+            }
+        }
     }
     else {
-        this.log('Controller Delay and mode variables found, creating controller accessory')
-        if (cachedAccessory === undefined)
-            this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
-        else {
-            if (this.debug) this.log('Adding cached controller: %s', data.equipment.model)
-            this.accessories[uuid] = new controllerAccessory(this.log, cachedAccessory, controllerData, Homebridge, this)
-        }
+        if (this.LogLevel >= 3) this.log('EasyTouch controller not found, skipping controller accessory')
     }
 
     // add temp accessories
@@ -283,10 +307,12 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
 
-        if (cachedAccessory === undefined)
+        if (cachedAccessory === undefined) {
+            if (this.LogLevel >= 3) this.log('Creating new temp sensor: Air Temperature')
             this.addTempAccessory(this.log, id, "Air Temperature", tempData.air, this);
+        }
         else {
-            if (this.debug) this.log('Adding cached temp sensor: Air Temperature')
+            if (this.LogLevel >= 3) this.log('Adding cached temp sensor: Air Temperature')
             this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.air, Homebridge, this)
         }
     }
@@ -297,10 +323,12 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
 
-        if (cachedAccessory === undefined)
+        if (cachedAccessory === undefined) {
+            if (this.LogLevel >= 3) this.log('Creating new temp sensor: Water Temperature')
             this.addTempAccessory(this.log, id, "Water Sensor", tempData.waterSensor1, this);
+        }
         else {
-            if (this.debug) this.log('Adding cached sensor: Water Temperature')
+            if (this.LogLevel >= 3) this.log('Adding cached sensor: Water Temperature')
             this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.waterSensor1, Homebridge, this)
         }
     }
@@ -310,20 +338,20 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
     //        reconnect: true,
     //        rejectUnauthorized: false
     //    });
-    this.log('Starting socket connection...')
+    if (this.LogLevel >= 4) this.log('Starting socket connection...')
     socket = io(self.config.ip_address);
 
     socket.on('connect', function () {
-        self.log('homebridge-poolcontroller connected to the server')
-        self.log("Socket connection status: ", socket.connected)
+        if (this.LogLevel >= 3) self.log('homebridge-poolcontroller connected to the server')
+        if (this.LogLevel >= 3) self.log("Socket connection status: ", socket.connected)
 
     })
 
     socket.on('connect_error', function () {
-        self.log('ERROR: homebridge-poolcontroller can NOT find the pool controller')
+        if (this.LogLevel >= 2) self.log('ERROR: homebridge-poolcontroller can NOT find the pool controller')
     })
     socket.on('error', function (data) {
-        console.log('Socket error:', data)
+        if (this.LogLevel >= 2) console.log('Socket error:', data)
     });
 
     socket.on('circuit', this.socketCircuitUpdated.bind(this));
@@ -335,12 +363,12 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
 };
 
 PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
-    if (this.debug) this.log('FROM TEMP CLIENT: ' + JSON.stringify(tempData, null, "\t"));
+    if (this.LogLevel >= 4) this.log('FROM TEMP CLIENT: ' + JSON.stringify(tempData, null, "\t"));
     allbodyData = tempData.bodies
 
     if (this.config.setupBodyAsCircuit == false) {
         for (var i in allbodyData) {
-            if (this.debug) this.log('Updating temp (and all other) data for body: ', allbodyData[i].name)
+            if (this.LogLevel >= 3) this.log('Updating temp (and all other) data for body: ', allbodyData[i].name)
             this.socketbodyUpdated(allbodyData[i])
         }
     }
@@ -367,7 +395,7 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
 
 
 PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerData) {
-    if (this.debug) this.log('FROM CONTROLLER CLIENT: ' + JSON.stringify(controllerData, null, "\t"));
+    if (this.LogLevel >= 4) this.log('FROM CONTROLLER CLIENT: ' + JSON.stringify(controllerData, null, "\t"));
     if (controllerData.delay !== undefined || controllerData.mode !== undefined) {
 
         var id = "poolController.0.Controller";
@@ -381,7 +409,7 @@ PoolControllerPlatform.prototype.socketControllerUpdated = function (controllerD
 };
 
 PoolControllerPlatform.prototype.socketPumpUpdated = function (pumpData) {
-    if (this.debug) this.log('FROM PUMP CLIENT: ' + JSON.stringify(pumpData, null, "\t"));
+    if (this.LogLevel >= 4) this.log('FROM PUMP CLIENT: ' + JSON.stringify(pumpData, null, "\t"));
     var pumpNumber = pumpData.id
     var pumpName = pumpData.type.desc
     var id = "poolController." + pumpNumber + "." + pumpName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
@@ -394,7 +422,7 @@ PoolControllerPlatform.prototype.socketPumpUpdated = function (pumpData) {
 };
 
 PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
-    if (this.debug) this.log('FROM CIRCUIT CLIENT: ' + JSON.stringify(circuitData, null, "\t"));
+    if (this.LogLevel >= 4) this.log('FROM CIRCUIT CLIENT: ' + JSON.stringify(circuitData, null, "\t"));
     var circuitNumber = circuitData.id;
     var circuitFunction = circuitData.type.name.toLowerCase();
     var circuitName = circuitData.name;
@@ -434,19 +462,17 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
 };
 
 PoolControllerPlatform.prototype.socketbodyUpdated = function (bodyData) {
-    if (this.debug) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
+    if (this.LogLevel >= 4) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
     var bodyNumber = bodyData.circuit
     var bodyName = bodyData.name
     var bodyID = bodyData.id
     var id = "poolController." + bodyNumber + "." + bodyID + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
 
-    if (this.debug) this.log('Preparing to update data for body ', bodyData.name)
     var uuid = UUIDGen.generate(id);
     var cachedAccessory = this.accessories[uuid];
-    if (cachedAccessory !== undefined) {
-        if (this.debug) this.log('Updating data for body ', bodyData.name)
+    if (cachedAccessory !== undefined)
         cachedAccessory.updateState(bodyData)
-    }
+
 
 }
 
@@ -464,7 +490,6 @@ PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier
     this.accessories[uuid] = new circuitAccessory(log, accessory, circuit, power, Homebridge, platform);
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
 
-    //get this info from socket? does it matter? also model and serial.
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
 
 };
@@ -473,14 +498,12 @@ PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, a
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.Switch, accessoryName);
-    //    accessory.addService(Service.TemperatureSensor, accessoryName + " Temp");
     accessory.addService(Service.Thermostat);
 
 
     this.accessories[uuid] = new bodyAccessory(log, accessory, bodyData, Homebridge, platform);
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
 
-    //    accessory.getService(Service.TemperatureSensor).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
     accessory.getService(Service.Thermostat).setCharacteristic(Characteristic.TemperatureDisplayUnits, Characteristic.TemperatureDisplayUnits.FAHRENHEIT)
     accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
         .setProps({
@@ -579,14 +602,12 @@ PoolControllerPlatform.prototype.addLightAccessory = function (log, identifier, 
 PoolControllerPlatform.prototype.execute = async function (action, data) {
     const axios = require('axios').default;
     var poolURL = this.config.ip_address
-    //if (this.debug) { this.log("Executing request - server: %s, command: %s, data:", poolURL, action, data) }
 
     let opts = {
         method: 'put',
         data: data
     }
     switch (action) {
-        // CIRCUITS
         case 'setCircuitState':
             opts.url = `${poolURL}/state/circuit/setState`
             break;
@@ -600,7 +621,6 @@ PoolControllerPlatform.prototype.execute = async function (action, data) {
         case 'toggleCircuit':
             opts.url = `${poolURL}/state/circuit/toggleState`;
             break
-        // DATE TIME
         case 'setDateTime':
             opts['url'] = `${poolURL}/config/dateTime`;
             break;
@@ -659,16 +679,16 @@ PoolControllerPlatform.prototype.execute = async function (action, data) {
             opts.url = `${poolURL}/state/all`
             break;
         default:
-            console.log(`missing API call ${action}`)
+            if (this.LogLevel >= 2) this.log(`missing API call ${action}`)
             return Promise.reject(`missing API call ${action}`)
     }
     try {
-        if (this.debug) { this.log('Sending command to pool controller server: ', opts) }
+        if (this.LogLevel >= 4)  this.log('Sending command to pool controller server: ', opts) 
         let res = await axios(opts);
         return res.data;
     }
     catch (err) {
-        console.log(`Error fetching data: ${err.message}`);
+        if (this.LogLevel >= 2) this.log(`Error fetching data: ${err.message}`);
         return Promise.reject(err);
     }
 

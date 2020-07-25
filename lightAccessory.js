@@ -27,7 +27,7 @@ var PoolCircuitAccessory = function(log, accessory, circuit, circuitState, homeb
  }
 
 PoolCircuitAccessory.prototype.setCircuitState = async function(circuitState, callback) {
-  if (this.debug) this.log("Setting Circuit", this.accessory.displayName, "to", circuitState, " from ", this.circuitState);
+  if (this.platform.LogLevel >= 3) this.log("Setting Circuit", this.accessory.displayName, "to", circuitState, " from ", this.circuitState);
   if (this.circuitState !== circuitState) {
 
     await this.platform.execute("toggleCircuit", {id: this.circuit})
@@ -48,7 +48,7 @@ PoolCircuitAccessory.prototype.getCircuitState = function(callback) {
 // For when state is changed elsewhere.
 PoolCircuitAccessory.prototype.updateState = function(circuitState) {
   if (this.circuitState !== circuitState) {
-    if (this.debug) this.log("Update Light State for %s (state: %s-->%s)", this.accessory.displayName, this.circuitState, circuitState)
+    if (this.platform.LogLevel >= 3) this.log("Update Light State for %s (state: %s-->%s)", this.accessory.displayName, this.circuitState, circuitState)
     this.circuitState = circuitState;
 
     // since this is being called internally (via the socket initiation), call the function that will call the callback
