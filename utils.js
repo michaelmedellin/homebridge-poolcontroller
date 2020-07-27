@@ -27,6 +27,7 @@ const F2C = (fahrenheit) => {
 
 }
 
+/*
 const HK_State = (HK_HeatStatus, myCharacteristic) => {
   Characteristic = myCharacteristic
   if (HK_HeatStatus==Characteristic.CurrentHeatingCoolingState.OFF) 
@@ -34,6 +35,7 @@ const HK_State = (HK_HeatStatus, myCharacteristic) => {
   else 
       return 1
 }
+*/
 
 const HK_Mode = (HK_HeatMode, myCharacteristic) => {
   Characteristic = myCharacteristic
@@ -48,4 +50,3 @@ exports.C2F = C2F
 exports.HeatingState = HeatingState
 exports.HeatingMode = HeatingMode
 exports.HK_Mode = HK_Mode
-exports.HK_State = HK_State

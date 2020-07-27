@@ -112,7 +112,7 @@ PoolBodyAccessory.prototype.setThermoTargetTemp = function (newSetPoint, callbac
 };
 
 PoolBodyAccessory.prototype.getThermoState = function (callback) {
-  callback(null, utils.HK_State(this.bodyData.heatStatus, Characteristic));
+  callback(null, utils.HeatingState(this.bodyData.heatStatus, Characteristic));
 };
 
 PoolBodyAccessory.prototype.getThermoTargetState = function (callback) {
@@ -163,10 +163,11 @@ PoolBodyAccessory.prototype.updateState = function (newbodyData) {
   this.loggingService.addEntry({ time: moment().unix(), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus.val });
   var interval = 8 * 60 * 1000
   clearTimeout(this.bodyTempTimer)
-  this.bodyTempTimer = setInterval(function (platform, loggingService, tempData, setPoint, heatState) {
+  this.bodyTempTimer = setInterval(function (platform, loggingService, accessory, tempData, setPoint, heatState) {
     if (platform.LogLevel >= 4) platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatState * 100)
-    loggingService.addEntry({ time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState })
-  }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
+    loggingService.addEntry({ time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState });
+
+  }, interval, this.platform, this.accessory, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
 
   return
 }
