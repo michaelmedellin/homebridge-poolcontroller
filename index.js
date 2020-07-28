@@ -177,10 +177,11 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         }
 
         if (circuitData[i].type.name.toLowerCase() == "spa" || circuitData[i].type.name.toLowerCase() == "pool") {
-            if (this.config.setupBodyAsCircuit)
+            if (this.config.setupBodyAsCircuit) {
                 if (this.LogLevel >= 3)
                     this.log('setupBodyAsCircuit is true, setting up %s as circuit and NOT body accessory', circuitData[i].name)
-                else addCircuit = false
+            }
+            else addCircuit = false
 
         }
 
@@ -288,7 +289,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         }
         else {
             if (cachedAccessory === undefined) {
-            if (this.LogLevel >= 3) this.log('Controller Delay and mode variables found, creating controller accessory: %s', data.equipment.model)
+                if (this.LogLevel >= 3) this.log('Controller Delay and mode variables found, creating controller accessory: %s', data.equipment.model)
                 this.addControllerAccessory(this.log, id, data.equipment.model, controllerData, this);
             }
             else {
@@ -683,7 +684,7 @@ PoolControllerPlatform.prototype.execute = async function (action, data) {
             return Promise.reject(`missing API call ${action}`)
     }
     try {
-        if (this.LogLevel >= 4)  this.log('Sending command to pool controller server: ', opts) 
+        if (this.LogLevel >= 4) this.log('Sending command to pool controller server: ', opts)
         let res = await axios(opts);
         return res.data;
     }

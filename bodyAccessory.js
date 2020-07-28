@@ -140,7 +140,7 @@ PoolBodyAccessory.prototype.updateState = function (newbodyData) {
     this.log('Updating data for %s body: state: %s', newbodyData.name, newbodyData.isOn)
 
   if (this.platform.LogLevel >= 4)
-    this.log('Additional data for %s body: Curr temp: %s, target temp: %s, current state: %s, target state: %s', newbodyData.name, newbodyData.temp, newbodyData.setPoint, newbodyData.heatStatus.desc, newbodyData.heatMode.desc)
+    this.log('Additional data for %s body: Curr temp: %s, target temp: %s, heat state: %s, target heat state: %s', newbodyData.name, newbodyData.temp, newbodyData.setPoint, newbodyData.heatStatus.desc, newbodyData.heatMode.desc)
 
   this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On)
     .updateValue(this.bodyData.isOn);
@@ -163,11 +163,11 @@ PoolBodyAccessory.prototype.updateState = function (newbodyData) {
   this.loggingService.addEntry({ time: moment().unix(), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus.val });
   var interval = 8 * 60 * 1000
   clearTimeout(this.bodyTempTimer)
-  this.bodyTempTimer = setInterval(function (platform, loggingService, accessory, tempData, setPoint, heatState) {
+  this.bodyTempTimer = setInterval(function (platform, loggingService, tempData, setPoint, heatState) {
     if (platform.LogLevel >= 4) platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatState * 100)
-    loggingService.addEntry({ time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState });
+    loggingService.addEntry({ time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState * 100 });
 
-  }, interval, this.platform, this.accessory, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
+  }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
 
   return
 }
