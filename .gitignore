@@ -1,5 +1,4 @@
 .gitignore
 node_modules/
 package-lock.json
-notes.txt
 homebridge-poolcontroller.code-workspace

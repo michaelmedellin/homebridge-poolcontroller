@@ -77,6 +77,13 @@
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "SupressWaterSensor": {
+        "title": "Supress creation of Water Temperature sensor accessories?",
+        "type": "boolean",
+        "required": false,
+        "default": false
+
       }
     }
   },

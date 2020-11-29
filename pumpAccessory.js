@@ -1,7 +1,7 @@
 var Accessory, Service, Characteristic, UUIDGen;
 //var debug = false;
 var utils = require('./utils.js')
-var moment = require('moment');
+// var moment = require('moment');
 
 var PoolPumpAccessory = function (log, accessory, pumpData, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
@@ -120,12 +120,12 @@ PoolPumpAccessory.prototype.updateState = function (newpumpData) {
   this.accessory.getService(Service.Fan).getCharacteristic(CustomTypes.PumpRPM)
     .updateValue(this.pumpData.rpm);
 
-  this.loggingService.addEntry({ time: moment().unix(), power: this.pumpData.watts });
+  this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), power: this.pumpData.watts });
 
   var interval = 5 * 60 * 1000
   clearTimeout(this.pumpUpdateTimer)
   this.pumpUpdateTimer = setInterval(function (platform, loggingService, pumpData) {
-    loggingService.addEntry({ time: moment().unix(), power: pumpData.watts })
+    loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), power: pumpData.watts })
   }, interval, this.platform, this.loggingService, this.pumpData)
 
   return
