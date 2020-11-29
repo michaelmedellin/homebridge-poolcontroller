@@ -1,7 +1,5 @@
 var Accessory, Service, Characteristic, UUIDGen;
-//var debug = false;
 var utils = require('./utils.js')
-var moment = require('moment');
 
 var PoolBodyAccessory = function (log, accessory, bodyData, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
@@ -19,7 +17,7 @@ var PoolBodyAccessory = function (log, accessory, bodyData, homebridge, platform
   var customtypes = require('./customTypes.js')
   var CustomTypes = new customtypes(Homebridge)
   var FakeGatoHistoryService = require('fakegato-history')(homebridge);
-  this.loggingService = new FakeGatoHistoryService("thermo", this.accessory, { size: 11520, disableTimer: true, storage: 'fs' });
+  this.loggingService = new FakeGatoHistoryService("custom", this.accessory, { size: 11520, disableTimer: true, storage: 'fs' });
 
 
   this.service = accessory.getService(Service.Switch);
@@ -72,6 +70,7 @@ PoolBodyAccessory.prototype.setCircuitState = async function (newCircuitState, c
     if (this.platform.LogLevel >= 3) this.log("Setting Body", this.accessory.displayName, "to", newCircuitState);
     await this.platform.execute("toggleCircuit", { id: this.bodyData.circuit })
     this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On).updateValue(newCircuitState);
+    this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), status: this.bodyData.isOn });
 
   }
 
@@ -160,14 +159,18 @@ PoolBodyAccessory.prototype.updateState = function (newbodyData) {
   this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetHeatingCoolingState)
     .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
 
-  this.loggingService.addEntry({ time: moment().unix(), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus.val });
+  this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus.val });
+  this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), status: this.bodyData.isOn });
+  
   var interval = 8 * 60 * 1000
   clearTimeout(this.bodyTempTimer)
-  this.bodyTempTimer = setInterval(function (platform, loggingService, tempData, setPoint, heatState) {
+  this.bodyTempTimer = setInterval(function (platform, loggingService, tempData, setPoint, heatState, switchState) {
     if (platform.LogLevel >= 4) platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatState * 100)
-    loggingService.addEntry({ time: moment().unix(), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState * 100 });
+    loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState * 100 });
+    loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), status: switchState });
+  
 
-  }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
+  }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val, this.bodyData.isOn)
 
   return
 }

@@ -1,7 +1,7 @@
 var Accessory, Service, Characteristic, UUIDGen;
 //var debug = false;
 var utils = require('./utils.js')
-var moment = require('moment');
+// var moment = require('moment');
 
 var PoolTempAccessory = function (log, accessory, tempData, homebridge, platform) {
   Accessory = homebridge.platformAccessory;
@@ -55,12 +55,12 @@ PoolTempAccessory.prototype.updateState = function (newtempData) {
   this.accessory.getService(Service.TemperatureSensor).getCharacteristic(Characteristic.CurrentTemperature)
     .updateValue(utils.F2C(this.tempData));
 
-  this.loggingService.addEntry({ time: moment().unix(), temp: utils.F2C(this.tempData) });
+  this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), temp: utils.F2C(this.tempData) });
 
   var interval = 10 * 60 * 1000
   clearTimeout(this.tempUpdateTimer)
   this.tempUpdateTimer = setInterval(function (platform, loggingService, tempData) {
-    loggingService.addEntry({ time: moment().unix(), temp: utils.F2C(tempData) })
+    loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), temp: utils.F2C(tempData) })
   }, interval, this.platform, this.loggingService, this.tempData)
 
   return

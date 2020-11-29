@@ -35,6 +35,7 @@ function PoolControllerPlatform(log, config, api) {
     self.accessories = {};
     self.skipAllUnInit = self.config.skipAllUnInit;
     self.skipCircuitNames = self.config.skipCircuitNames || [];
+    self.SupressWaterSensor = self.config.SupressWaterSensor || false;
 
     if (this.config.LogLevel == undefined) { this.LogLevel = 3 }
     else {
@@ -318,22 +319,28 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         }
     }
 
+    if (this.SupressWaterSensor) {
+        if (this.LogLevel >= 3) this.log('Supress Water sensor option is set, skipping creation of water sensor accessory')
 
-    if (tempData.waterSensor1 !== undefined) {
-        var id = "poolController.B.WaterTemp";
-        var uuid = UUIDGen.generate(id);
-        var cachedAccessory = this.accessories[uuid];
+    }
+    else {
+        if (this.LogLevel >= 3) this.log('Supress Water sensor option set to False (or not set), attempting creation of water sensor accessory')
 
-        if (cachedAccessory === undefined) {
-            if (this.LogLevel >= 3) this.log('Creating new temp sensor: Water Temperature')
-            this.addTempAccessory(this.log, id, "Water Sensor", tempData.waterSensor1, this);
-        }
-        else {
-            if (this.LogLevel >= 3) this.log('Adding cached sensor: Water Temperature')
-            this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.waterSensor1, Homebridge, this)
+        if (tempData.waterSensor1 !== undefined) {
+            var id = "poolController.B.WaterTemp";
+            var uuid = UUIDGen.generate(id);
+            var cachedAccessory = this.accessories[uuid];
+
+            if (cachedAccessory === undefined) {
+                if (this.LogLevel >= 3) this.log('Creating new temp sensor: Water Temperature')
+                this.addTempAccessory(this.log, id, "Water Sensor", tempData.waterSensor1, this);
+            }
+            else {
+                if (this.LogLevel >= 3) this.log('Adding cached sensor: Water Temperature')
+                this.accessories[uuid] = new tempAccessory(this.log, cachedAccessory, tempData.waterSensor1, Homebridge, this)
+            }
         }
     }
-
     //    socket = io(self.config.ip_address, {
     //        secure: self.config.secure,
     //        reconnect: true,
@@ -383,7 +390,7 @@ PoolControllerPlatform.prototype.socketTempsUpdated = function (tempData) {
         }
     }
 
-    if (tempData.waterSensor1 !== undefined) {
+    if (tempData.waterSensor1 !== undefined && !this.SupressWaterSensor) {
         var id = "poolController.B.WaterTemp";
         var uuid = UUIDGen.generate(id);
         var cachedAccessory = this.accessories[uuid];
@@ -492,6 +499,7 @@ PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
 
     accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.Manufacturer, "Pentair");
+    accessory.getService(Service.AccessoryInformation).setCharacteristic(Characteristic.SerialNumber, uuid);
 
 };
 
