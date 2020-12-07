@@ -17,9 +17,10 @@ var PoolBodyAccessory = function (log, accessory, bodyData, homebridge, platform
   var customtypes = require('./customTypes.js')
   var CustomTypes = new customtypes(Homebridge)
   var FakeGatoHistoryService = require('fakegato-history')(homebridge);
-  this.loggingService = new FakeGatoHistoryService("custom", this.accessory, { size: 11520, disableTimer: true, storage: 'fs' });
+  this.loggingService = new FakeGatoHistoryService("thermo", this.accessory, { size: 11520, disableTimer: true, storage: 'fs' });
 
 
+  /*
   this.service = accessory.getService(Service.Switch);
   if (this.service) {
     this.service
@@ -28,7 +29,7 @@ var PoolBodyAccessory = function (log, accessory, bodyData, homebridge, platform
       .on('get', this.getCircuitState.bind(this));
   }
 
-  /*
+  
    this.service = accessory.getService(Service.TemperatureSensor);
   if (this.service) {
     this.service  
@@ -64,6 +65,7 @@ var PoolBodyAccessory = function (log, accessory, bodyData, homebridge, platform
   // accessory.updateReachability(true);
 }
 
+/*
 PoolBodyAccessory.prototype.setCircuitState = async function (newCircuitState, callback) {
   if (this.bodyData.isOn !== newCircuitState) {
 
@@ -78,11 +80,12 @@ PoolBodyAccessory.prototype.setCircuitState = async function (newCircuitState, c
 
 };
 
-// Temp Sensor
 
 PoolBodyAccessory.prototype.getCircuitState = function (callback) {
   callback(null, this.bodyData.isOn);
 };
+
+*/
 
 PoolBodyAccessory.prototype.getCurrentTemp = function (callback) {
   callback(null, utils.F2C(this.bodyData.temp));
@@ -141,8 +144,8 @@ PoolBodyAccessory.prototype.updateState = function (newbodyData) {
   if (this.platform.LogLevel >= 4)
     this.log('Additional data for %s body: Curr temp: %s, target temp: %s, heat state: %s, target heat state: %s', newbodyData.name, newbodyData.temp, newbodyData.setPoint, newbodyData.heatStatus.desc, newbodyData.heatMode.desc)
 
-  this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On)
-    .updateValue(this.bodyData.isOn);
+//  this.accessory.getService(Service.Switch).getCharacteristic(Characteristic.On)
+//    .updateValue(this.bodyData.isOn);
 
   //    this.accessory.getService(Service.TemperatureSensor).getCharacteristic(Characteristic.CurrentTemperature)
   //      .updateValue(utils.F2C(this.bodyData.temp))
@@ -160,17 +163,14 @@ PoolBodyAccessory.prototype.updateState = function (newbodyData) {
     .updateValue(utils.HeatingMode(this.bodyData.heatMode, Characteristic))
 
   this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), currentTemp: utils.F2C(this.bodyData.temp), setTemp: utils.F2C(this.bodyData.setPoint), valvePosition: this.bodyData.heatStatus.val });
-  this.loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), status: this.bodyData.isOn });
   
   var interval = 8 * 60 * 1000
   clearTimeout(this.bodyTempTimer)
-  this.bodyTempTimer = setInterval(function (platform, loggingService, tempData, setPoint, heatState, switchState) {
+  this.bodyTempTimer = setInterval(function (platform, loggingService, tempData, setPoint, heatState) {
     if (platform.LogLevel >= 4) platform.log('Adding body temp log entry %s %s %s', tempData, setPoint, heatState * 100)
     loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), currentTemp: tempData, setTemp: setPoint, valvePosition: heatState * 100 });
-    loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), status: switchState });
   
-
-  }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val, this.bodyData.isOn)
+  }, interval, this.platform, this.loggingService, utils.F2C(this.bodyData.temp), utils.F2C(this.bodyData.setPoint), this.bodyData.heatStatus.val)
 
   return
 }

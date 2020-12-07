@@ -177,6 +177,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             addCircuit = false
         }
 
+        /*
         if (circuitData[i].type.name.toLowerCase() == "spa" || circuitData[i].type.name.toLowerCase() == "pool") {
             if (this.config.setupBodyAsCircuit) {
                 if (this.LogLevel >= 3)
@@ -185,6 +186,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
             else addCircuit = false
 
         }
+        */
 
         if (this.skipAllUnInit && circuitData[i].name.substr(0, 3) == "AUX") {
             addCircuit = false
@@ -441,10 +443,11 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
         updateCircuit = false
     }
 
+/*
     if ((this.config.setupBodyAsCircuit == false) && (circuitFunction == "spa" || circuitFunction == "pool")) {
         updateCircuit = false
     }
-
+*/
     if (this.skipAllUnInit && circuitName.substr(0, 3) == "AUX") {
         updateCircuit = false
     }
@@ -506,7 +509,7 @@ PoolControllerPlatform.prototype.addCircuitAccessory = function (log, identifier
 PoolControllerPlatform.prototype.addBodyAccessory = function (log, identifier, accessoryName, bodyData, platform) {
     var uuid = UUIDGen.generate(identifier);
     var accessory = new Accessory(accessoryName, uuid);
-    accessory.addService(Service.Switch, accessoryName);
+//    accessory.addService(Service.Switch, accessoryName);
     accessory.addService(Service.Thermostat);
 
 
