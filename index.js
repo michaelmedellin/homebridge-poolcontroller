@@ -238,7 +238,7 @@ PoolControllerPlatform.prototype.InitialData = function (data) {
         for (var i in bodyData) {
 
             var bodyNumber = bodyData[i].circuit
-            var bodyName = bodyData[i].name
+            var bodyName = bodyData[i].name + " Heater"
             var bodyID = bodyData[i].id
             var id = "poolController." + bodyNumber + "." + bodyID + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
             var uuid = UUIDGen.generate(id);
@@ -475,7 +475,7 @@ PoolControllerPlatform.prototype.socketCircuitUpdated = function (circuitData) {
 PoolControllerPlatform.prototype.socketbodyUpdated = function (bodyData) {
     if (this.LogLevel >= 4) this.log('FROM BODY CLIENT: ' + JSON.stringify(bodyData, null, "\t"));
     var bodyNumber = bodyData.circuit
-    var bodyName = bodyData.name
+    var bodyName = bodyData.name + " Heater"
     var bodyID = bodyData.id
     var id = "poolController." + bodyNumber + "." + bodyID + "." + bodyName; //added circuitName because circuit numbers will never change.  Changing the name will trigger a new UUID/device.
 
