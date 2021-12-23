@@ -74,7 +74,7 @@ PoolCircuitAccessory.prototype.updateState = function (circuitState) {
     if (platform.LogLevel >= 4) platform.log('Adding circuit log entry %s: %s', accessoryName, switchState)
     loggingService.addEntry({ time: Math.round(new Date().valueOf() / 1000), status: switchState });
   
-  }, interval, this.platform, this.loggingService, this.accessory.disableTimer, circuitState)
+  }, interval, this.platform, this.loggingService, this.accessory.displayName, circuitState)
 
   return
 };

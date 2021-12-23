@@ -63,7 +63,7 @@ function PoolControllerPlatform(log, config, api) {
     }
 
     if (this.config.debug != undefined) {
-        if (this.config.debug = true) this.LogLevel = 4
+        if (this.config.debug == true) this.LogLevel = 4
     }
 
     if (this.LogLevel == 4) this.debug = true

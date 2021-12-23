@@ -1,6 +1,6 @@
 {
   "name": "homebridge-poolcontroller",
-  "version": "3.1.4",
+  "version": "3.2.0",
   "description": "PoolController plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
   "keywords": [
@@ -26,9 +26,9 @@
     "homebridge": ">=0.2.0"
   },
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": ">=0.21.1",
     "node-ssdp": "^3.2.5",
     "socket.io-client": "^2.2.0",
-    "fakegato-history": "^0.6.1"
+    "fakegato-history": "^0.6.2"
   }
 }
