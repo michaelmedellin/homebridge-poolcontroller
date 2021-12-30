@@ -107,7 +107,7 @@ PoolBodyAccessory.prototype.setThermoTargetTemp = function (newSetPoint, callbac
     if (this.platform.LogLevel >= 3) this.log("Setting Body Setpoint", this.accessory.displayName, "to", Math.round(utils.C2F(newSetPoint)));
 
     this.platform.execute("setHeatSetPoint", { id: this.bodyData.id, heatSetpoint: utils.C2F(newSetPoint) })
-    this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(utils.F2C(Math.round(utils.F2C(newSetPoint))));
+    this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(Math.round(utils.F2C(newSetPoint)));
 
   }
   callback();
