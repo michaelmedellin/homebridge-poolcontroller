@@ -58,8 +58,8 @@ PoolControllerAccessory.prototype.updateState = function(newcontrollerData) {
   
   this.controllerData = newcontrollerData;
 //    this.accessory.getService(Service.ContactSensor).getCharacteristic(Characteristic.ContactSensorState).updateValue(this.controllerData.delay.val == 32 ? Characteristic.ContactSensorState.CONTACT_DETECTED : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED); 
-//    this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.controllerMode).updateValue(this.controllerData.mode.desc); 
-//    this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.delayReason).updateValue(this.controllerData.delay.desc); 
+    this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.controllerMode).updateValue(this.controllerData.mode.desc); 
+    this.accessory.getService(Service.ContactSensor).getCharacteristic(CustomTypes.delayReason).updateValue(this.controllerData.delay.desc); 
   return
 };
 
