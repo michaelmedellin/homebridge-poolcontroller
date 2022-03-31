@@ -589,8 +589,8 @@ PoolControllerPlatform.prototype.addControllerAccessory = function (log, identif
     var accessory = new Accessory(accessoryName, uuid);
     accessory.addService(Service.ContactSensor, "Delay State")
 
-    accessory.getService(Service.ContactSensor).addCharacteristic(CustomTypes.controllerMode)
-    accessory.getService(Service.ContactSensor).addCharacteristic(CustomTypes.delayReason)
+//    accessory.getService(Service.ContactSensor).addCharacteristic(CustomTypes.controllerMode)
+//    accessory.getService(Service.ContactSensor).addCharacteristic(CustomTypes.delayReason)
 
     this.accessories[uuid] = new controllerAccessory(log, accessory, controllerData, Homebridge, platform);
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);

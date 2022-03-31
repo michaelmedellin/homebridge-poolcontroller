@@ -80,10 +80,11 @@ module.exports = function (pHomebridge) {
     this.PumpRPM.UUID = '80F53933-FC27-4173-9DD9-5A0CA2D6E362';
     inherits(this.PumpRPM, Characteristic);
 
+    /*
     this.controllerMode = function () {
         Characteristic.call(this, 'Controller Mode', '4DF47BFC-43F5-43E8-8CE5-B0C0C62C7485');
         this.setProps({
-            format: Format.String,
+            format: HMCharacteristicMetadataFormatString,
             perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
         });
         this.value = this.getDefaultValue();
@@ -102,5 +103,5 @@ module.exports = function (pHomebridge) {
     this.delayReason.UUID = '17F18B3F-4AB8-4470-B195-65A4C3203122';
     inherits(this.delayReason, Characteristic);
 
-
+*/
 }
