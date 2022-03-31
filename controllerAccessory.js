@@ -23,14 +23,17 @@ var PoolControllerAccessory = function(log, accessory, controllerData, homebridg
       .getCharacteristic(Characteristic.ContactSensorState)
       .on('get', this.getDelayState.bind(this));
 
-    this.service
+/*
+      this.service
     .getCharacteristic(CustomTypes.controllerMode)
     .on('get', this.getControllerMode.bind(this))
 
     this.service
     .getCharacteristic(CustomTypes.delayReason)
     .on('get', this.getDelayReason.bind(this))
-    }
+*/
+  }
+
 
     this.updateState(controllerData)
   // not needed/used with latest HomeKit API's
@@ -42,7 +45,7 @@ PoolControllerAccessory.prototype.getDelayState = function(callback) {
   callback(null, this.controllerData.delay.val == 32 ? Characteristic.ContactSensorState.CONTACT_DETECTED : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED);
 };
 
-
+/*
 PoolControllerAccessory.prototype.getControllerMode = function(callback) {
   callback(null, this.controllerData.mode.desc);
 };
@@ -50,6 +53,7 @@ PoolControllerAccessory.prototype.getControllerMode = function(callback) {
 PoolControllerAccessory.prototype.getDelayReason = function(callback) {
   callback(null, this.controllerData.delay.desc);
 };
+*/
 
 // For when state is changed elsewhere.
 PoolControllerAccessory.prototype.updateState = function(newcontrollerData) {
