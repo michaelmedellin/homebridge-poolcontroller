@@ -91,7 +91,7 @@ PoolControllerPlatform.prototype.SSDPDiscovery = function () {
 
         client.on('response', function inResponse(headers, code, rinfo) {
             //console.log('Got a response to an m-search:\n%d\n%s\n%s', code, JSON.stringify(headers, null, '  '), JSON.stringify(rinfo, null, '  '))
-            if (headers.ST === 'urn:schemas-upnp-org:device:PoolController:1') {
+            if (headers.ST === 'urn:schemas-tagyoureit-org:device:PoolController:1') {
                 self.config.ip_address = headers.LOCATION.replace('/device', '');
                 if (this.LogLevel >= 3) self.log('Found nodejs-poolController at %s.', self.config.ip_address)
                 client.stop()
@@ -100,12 +100,12 @@ PoolControllerPlatform.prototype.SSDPDiscovery = function () {
             }
         })
 
-        client.search('urn:schemas-upnp-org:device:PoolController:1')
+        client.search('urn:schemas-tagyoureit-org:device:PoolController:1')
 
         //Or maybe if you want to scour for everything after 5 seconds
         timer = setInterval(function () {
             elapsedTime += 5;
-            client.search('urn:schemas-upnp-org:device:PoolController:1')
+            client.search('urn:schemas-tagyoureit-org:device:PoolController:1')
             if (this.LogLevel >= 2) self.log('Can not find nodejs-PoolController after %s seconds.', elapsedTime)
         }, 5000)
 
