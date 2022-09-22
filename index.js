@@ -92,7 +92,7 @@ PoolControllerPlatform.prototype.SSDPDiscovery = function () {
         client.on('response', function inResponse(headers, code, rinfo) {
             //console.log('Got a response to an m-search:\n%d\n%s\n%s', code, JSON.stringify(headers, null, '  '), JSON.stringify(rinfo, null, '  '))
             if (headers.ST === 'urn:schemas-tagyoureit-org:device:PoolController:1') {
-                self.config.ip_address = headers.LOCATION.replace('/device', '');
+                self.config.ip_address = headers.LOCATION.replace('/upnp.xml', '');
                 if (this.LogLevel >= 3) self.log('Found nodejs-poolController at %s.', self.config.ip_address)
                 client.stop()
                 clearTimeout(timer)
@@ -124,8 +124,8 @@ PoolControllerPlatform.prototype.validateVersion = async function (URL) {
 
     body = await self.execute("device")
 
-    var major = parseInt(body.match("<major>(.*)</major>")[1])
-    var minor = parseInt(body.match("<minor>(.*)</minor>")[1])
+    var major = parseInt(body.match(/<device>[\s|\S]+<appVersion>[\s|\S]+<major>(\d+)<\/major>/)[1], 10);
+    var minor = parseInt(body.match(/<device>[\s|\S]+<appVersion>[\s|\S]+<minor>(\d+)<\/minor>/)[1], 10);
     if (major > validMajor)
         valid = true
     else if (major === validMajor && minor >= validMinor)
@@ -686,7 +686,7 @@ PoolControllerPlatform.prototype.execute = async function (action, data) {
         // UTILITIES
         case "device":
             opts.method = 'get'
-            opts.url = `${poolURL}/device`
+            opts.url = `${poolURL}/upnp.xml` 
             break;
         case "getAll":
             opts.method = 'get'
