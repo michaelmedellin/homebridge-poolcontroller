@@ -17,10 +17,6 @@
     "pump",
     "chlorinator"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/gadget-monk/homebridge-poolcontroller.git"
-  },
   "engines": {
     "node": ">=0.12.0",
     "homebridge": ">=0.2.0"
