@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-poolcontroller",
+  "name": "homebridge-poolcontroller-test",
   "version": "3.2.8",
   "description": "PoolController plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
