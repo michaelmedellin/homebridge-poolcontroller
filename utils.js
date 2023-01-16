@@ -40,9 +40,9 @@ const HK_State = (HK_HeatStatus, myCharacteristic) => {
 const HK_Mode = (HK_HeatMode, myCharacteristic) => {
   Characteristic = myCharacteristic
   if (HK_HeatMode==Characteristic.TargetHeatingCoolingState.OFF) 
-      return 0
-  else 
       return 1
+  else 
+      return 2
 }
 
 exports.F2C = F2C
