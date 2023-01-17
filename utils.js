@@ -20,7 +20,7 @@ const F2C = (fahrenheit) => {
 
  const HeatingMode = (heatMode, myCharacteristic) => {
   Characteristic = myCharacteristic
-  if (heatMode.val==0)
+  if (heatMode.val==1)
     return Characteristic.TargetHeatingCoolingState.OFF
   else
     return Characteristic.TargetHeatingCoolingState.HEAT
