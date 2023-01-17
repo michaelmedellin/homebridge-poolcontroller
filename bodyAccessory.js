@@ -122,7 +122,7 @@ PoolBodyAccessory.prototype.getThermoTargetState = function (callback) {
 };
 
 PoolBodyAccessory.prototype.setThermoTargetState = async function (newTargetState, callback) {
-  if (this.platform.LogLevel >= 3) this.log("Setting Body Target State", this.accessory.displayName, "to", newTargetState);
+  if (this.platform.LogLevel >= 3) this.log("Setting Body Target State", this.accessory.displayName, "to", utils.HK_mode(newTargetState, Characteristic));
 
   await this.platform.execute("setHeatMode", { id: this.bodyData.id, mode: utils.HK_Mode(newTargetState, Characteristic) })
  //  this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature).updateValue(newTargetState);
